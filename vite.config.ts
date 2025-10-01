@@ -1,8 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vitejs.dev/config/
-export default defineConfig({
-  base: '/react-tailwind-project/',
+export default defineConfig(({ mode }) => ({
+  base: mode === 'production' ? '/react-tailwind-project/' : '/',
   plugins: [react()],
-})
+}))
