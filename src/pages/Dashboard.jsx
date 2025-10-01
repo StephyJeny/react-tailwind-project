@@ -37,7 +37,7 @@ export default function Dashboard() {
       </div>
 
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-4">
-        <h2 className="font-medium mb-3">Recent Transactions</h2>
+        <h2 className="font-medium mb-3">Recent Transactionss</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left opacity-70">
