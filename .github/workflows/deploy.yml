@@ -5,6 +5,11 @@ on:
     branches:
       - main  # runs only when you push to main
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
@@ -29,5 +34,4 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
-          publish_branch: main
-          destination_dir: docs
+          publish_branch: gh-pages
