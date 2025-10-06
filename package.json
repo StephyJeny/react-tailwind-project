@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "homepage": "https://StephyJeny.github.io/react-tailwind-project",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "date-fns": "^4.1.0",
