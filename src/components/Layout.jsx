@@ -1,46 +1,154 @@
-import React from "react";
+import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useApp } from "../state/AppContext";
 import ThemeToggle from "./ThemeToggle";
 import Cart from "./Cart";
+import LoadingSpinner from "./ui/LoadingSpinner";
 import { 
   ChartBarIcon, 
   Cog6ToothIcon, 
   ArrowRightOnRectangleIcon, 
   BanknotesIcon,
-  ShoppingBagIcon 
+  ShoppingBagIcon,
+  UserCircleIcon,
+  ChevronDownIcon,
+  ShieldCheckIcon
 } from "@heroicons/react/24/outline";
 
 export default function Layout({ children }) {
-  const nav = useNavigate();
-  const { user, setUser } = useApp();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const navigate = useNavigate();
+  const { user, logout, authError } = useApp();
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      navigate("/auth", { replace: true });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   const linkCls = ({ isActive }) =>
-    `flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 ${
-      isActive ? "bg-gray-100 dark:bg-gray-800" : ""
+    `flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
+      isActive ? "bg-gray-100 dark:bg-gray-800 text-indigo-600 dark:text-indigo-400" : ""
     }`;
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+      {/* Session timeout notification */}
+      {authError && (
+        <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800">
+          <div className="mx-auto max-w-6xl px-4 py-2">
+            <p className="text-sm text-red-800 dark:text-red-200 text-center">
+              {authError}
+            </p>
+          </div>
+        </div>
+      )}
+
       <header className="sticky top-0 z-30 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur">
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 font-semibold">
-            <BanknotesIcon className="h-6 w-6" />
+            <BanknotesIcon className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
             <span>Personal Finance & Store</span>
           </div>
+          
           <div className="flex items-center gap-3">
             <Cart />
             <ThemeToggle />
-            <div className="text-sm opacity-80">Hi, {user?.name}</div>
-            <button
-              onClick={() => { localStorage.clear(); setUser(null); nav("/login"); }}
-              className="inline-flex items-center gap-1 text-sm rounded px-3 py-1.5 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
-            >
-              <ArrowRightOnRectangleIcon className="h-4 w-4" /> Logout
-            </button>
+            
+            {/* User Menu */}
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center gap-2 text-sm rounded-lg px-3 py-2 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <UserCircleIcon className="h-5 w-5" />
+                <span className="hidden sm:block">{user?.name}</span>
+                {user?.role === 'admin' && (
+                  <ShieldCheckIcon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                )}
+                <ChevronDownIcon className="h-4 w-4" />
+              </button>
+
+              {/* Dropdown Menu */}
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+                  <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {user?.name}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {user?.email}
+                    </p>
+                    {user?.role && (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium mt-1 ${
+                        user.role === 'admin' 
+                          ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                      }`}>
+                        {user.role}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <NavLink
+                    to="/settings"
+                    className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Cog6ToothIcon className="h-4 w-4" />
+                      Settings
+                    </div>
+                  </NavLink>
+                  
+                  {user?.role === 'admin' && (
+                    <NavLink
+                      to="/admin"
+                      className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <ShieldCheckIcon className="h-4 w-4" />
+                        Admin Panel
+                      </div>
+                    </NavLink>
+                  )}
+                  
+                  <button
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="w-full text-left px-4 py-2 text-sm text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
+                  >
+                    <div className="flex items-center gap-2">
+                      {isLoggingOut ? (
+                        <LoadingSpinner size="sm" />
+                      ) : (
+                        <ArrowRightOnRectangleIcon className="h-4 w-4" />
+                      )}
+                      {isLoggingOut ? 'Signing out...' : 'Sign out'}
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
+
+      {/* Click outside to close user menu */}
+      {showUserMenu && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setShowUserMenu(false)}
+        />
+      )}
 
       <div className="mx-auto max-w-6xl px-4 py-6 grid md:grid-cols-[220px,1fr] gap-6">
         <aside className="md:sticky md:top-16 h-max">
@@ -57,6 +165,13 @@ export default function Layout({ children }) {
             <NavLink to="/settings" className={linkCls}>
               <Cog6ToothIcon className="h-5 w-5" /> Settings
             </NavLink>
+            
+            {/* Admin-only navigation */}
+            {user?.role === 'admin' && (
+              <NavLink to="/admin" className={linkCls}>
+                <ShieldCheckIcon className="h-5 w-5" /> Admin Panel
+              </NavLink>
+            )}
           </nav>
         </aside>
 
