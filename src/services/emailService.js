@@ -1,10 +1,12 @@
-// Email service for sending verification emails
-// You can use SendGrid, Nodemailer with Gmail, or other email providers
+import axios from 'axios';
+
+// Email service that delegates actual sending to backend API
+// Backend handles provider (SendGrid/Nodemailer) and credentials securely
 
 class EmailService {
   constructor() {
-    // Configure your email provider here
-    this.provider = 'console'; // 'sendgrid', 'gmail', 'console' for development
+    this.API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+    this.provider = 'api'; // 'api' posts to backend; 'console' for dev preview
   }
 
   async sendVerificationEmail(email, verificationToken, userName) {
@@ -35,7 +37,7 @@ class EmailService {
       `
     };
 
-    return this.sendEmail(emailContent);
+    return this.sendEmail(emailContent, { kind: 'verification', url: verificationUrl, userName });
   }
 
   async sendPasswordResetEmail(email, resetToken, userName) {
@@ -67,11 +69,31 @@ class EmailService {
       `
     };
 
-    return this.sendEmail(emailContent);
+    return this.sendEmail(emailContent, { kind: 'password_reset', url: resetUrl, userName });
   }
 
-  async sendEmail(emailContent) {
+  async sendEmail(emailContent, meta = {}) {
     switch (this.provider) {
+      case 'api':
+        // Send via backend API to avoid exposing credentials in the client
+        try {
+          const response = await axios.post(`${this.API_BASE_URL}/email/send`, {
+            to: emailContent.to,
+            subject: emailContent.subject,
+            html: emailContent.html,
+            text: this.extractText(emailContent.html, meta),
+            kind: meta.kind || 'transactional'
+          }, {
+            timeout: 10000
+          });
+          return { success: true, messageId: response.data.messageId };
+        } catch (error) {
+          console.error('Email API error:', error);
+          // Fall back to console preview in development
+          this.showDevNotification(emailContent);
+          throw new Error('Failed to send email via API');
+        }
+
       case 'console':
         // Development mode - log to console
         console.log('📧 Email would be sent:');
@@ -83,15 +105,18 @@ class EmailService {
         this.showDevNotification(emailContent);
         return { success: true, messageId: 'dev-' + Date.now() };
 
-      case 'sendgrid':
-        return this.sendWithSendGrid(emailContent);
-
-      case 'gmail':
-        return this.sendWithGmail(emailContent);
-
       default:
         throw new Error('Email provider not configured');
     }
+  }
+
+  extractText(html, meta) {
+    // Simple text fallback for better deliverability
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const text = tmp.textContent || '';
+    const suffix = meta.url ? `\n\nIf the button doesn't work, open this link:\n${meta.url}` : '';
+    return `${text}${suffix}`.trim().replace(/\s{2,}/g, ' ');
   }
 
   showDevNotification(emailContent) {
@@ -131,54 +156,6 @@ class EmailService {
           notification.remove();
         }
       }, 30000);
-    }
-  }
-
-  async sendWithSendGrid(emailContent) {
-    // Implement SendGrid integration
-    const sgMail = require('@sendgrid/mail');
-    sgMail.setApiKey(import.meta.env.VITE_SENDGRID_API_KEY);
-    
-    try {
-      const msg = {
-        to: emailContent.to,
-        from: import.meta.env.VITE_FROM_EMAIL,
-        subject: emailContent.subject,
-        html: emailContent.html,
-      };
-      
-      const response = await sgMail.send(msg);
-      return { success: true, messageId: response[0].headers['x-message-id'] };
-    } catch (error) {
-      console.error('SendGrid error:', error);
-      throw new Error('Failed to send email via SendGrid');
-    }
-  }
-
-  async sendWithGmail(emailContent) {
-    // Implement Gmail/Nodemailer integration
-    const nodemailer = require('nodemailer');
-    
-    const transporter = nodemailer.createTransporter({
-      service: 'gmail',
-      auth: {
-        user: import.meta.env.VITE_GMAIL_USER,
-        pass: import.meta.env.VITE_GMAIL_APP_PASSWORD, // Use App Password, not regular password
-      },
-    });
-    
-    try {
-      const info = await transporter.sendMail({
-        from: import.meta.env.VITE_FROM_EMAIL,
-        to: emailContent.to,
-        subject: emailContent.subject,
-        html: emailContent.html,
-      });
-      
-      return { success: true, messageId: info.messageId };
-    } catch (error) {
-      console.error('Gmail error:', error);
-      throw new Error('Failed to send email via Gmail');
     }
   }
 }

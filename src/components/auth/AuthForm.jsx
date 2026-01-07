@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../../state/AppContext';
 import { loginSchema, registerSchema, forgotPasswordSchema, resetPasswordSchema } from '../../schemas/authSchemas';
+import { toast } from 'sonner';
 import { 
   EyeIcon, 
   EyeSlashIcon, 
@@ -182,34 +183,6 @@ const AuthForm = () => {
             </p>
           )}
         </div>
-
-        {/* Messages */}
-        {(message.text || authError) && (
-          <div className={`rounded-md p-4 ${
-            message.type === 'success' 
-              ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' 
-              : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-          }`}>
-            <div className="flex">
-              <div className="flex-shrink-0">
-                {message.type === 'success' ? (
-                  <CheckCircleIcon className="h-5 w-5 text-green-400" />
-                ) : (
-                  <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
-                )}
-              </div>
-              <div className="ml-3">
-                <p className={`text-sm ${
-                  message.type === 'success' 
-                    ? 'text-green-800 dark:text-green-200' 
-                    : 'text-red-800 dark:text-red-200'
-                }`}>
-                  {message.text || authError}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">

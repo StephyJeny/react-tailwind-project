@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation, useOutlet } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { useApp } from "../state/AppContext";
 import ThemeToggle from "./ThemeToggle";
 import Cart from "./Cart";
@@ -20,6 +21,8 @@ export default function Layout({ children }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigate = useNavigate();
   const { user, logout, authError } = useApp();
+  const location = useLocation();
+  const outlet = useOutlet();
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -175,6 +178,19 @@ export default function Layout({ children }) {
           </nav>
         </aside>
 
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="h-full"
+            >
+              {outlet || children}
+            </motion.div>
+          </AnimatePresence>
+        
         <main>{children}</main>
       </div>
     </div>

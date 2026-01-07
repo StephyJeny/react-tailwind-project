@@ -210,57 +210,17 @@ export const authService = {
     });
   },
 
-  // Verify email
-  verifyEmail: async (token) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // Simulate email verification
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const userIndex = users.findIndex(u => u.id === token);
-        
-        if (userIndex === -1) {
-          reject(new Error('Invalid verification token'));
-          return;
-        }
-        
-        users[userIndex].isEmailVerified = true;
-        localStorage.setItem('users', JSON.stringify(users));
-        
-        resolve({
-          data: { message: 'Email verified successfully' }
-        });
-      }, 1000);
-    });
-  },
-
-  // Request password reset
-  requestPasswordReset: async (email) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const user = users.find(u => u.email === email);
-        
-        if (!user) {
-          reject(new Error('Email not found'));
-          return;
-        }
-        
-        // In real app, send email with reset token
-        console.log(`Password reset email sent to ${email}`);
-        
-        resolve({
-          data: { message: 'Password reset email sent' }
-        });
-      }, 1000);
-    });
-  },
+  // (removed duplicate verifyEmail and requestPasswordReset)
 
   // Reset password
   resetPassword: async (token, newPassword) => {
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const userIndex = users.findIndex(u => u.id === token);
+        const userIndex = users.findIndex(u => 
+          u.resetToken === token && 
+          u.resetTokenExpiry && u.resetTokenExpiry > Date.now()
+        );
         
         if (userIndex === -1) {
           reject(new Error('Invalid reset token'));
@@ -268,6 +228,8 @@ export const authService = {
         }
         
         users[userIndex].password = newPassword;
+        users[userIndex].resetToken = null;
+        users[userIndex].resetTokenExpiry = null;
         localStorage.setItem('users', JSON.stringify(users));
         
         resolve({
