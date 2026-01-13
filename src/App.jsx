@@ -8,6 +8,7 @@ import Products from "./pages/Products";
 import Transactions from "./pages/Transactions";
 import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
+import Search from "./pages/Search";
 import { useApp } from "./state/AppContext";
 import { Toaster } from "sonner";
 
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="/products" element={<Products />} />
         <Route path="/transactions" element={<Transactions />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/search" element={<Search />} />
         
         <Route 
           path="/admin" 

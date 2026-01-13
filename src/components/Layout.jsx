@@ -13,7 +13,8 @@ import {
   ShoppingBagIcon,
   UserCircleIcon,
   ChevronDownIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  MagnifyingGlassIcon
 } from "@heroicons/react/24/outline";
 
 export default function Layout({ children }) {
@@ -167,6 +168,9 @@ export default function Layout({ children }) {
             </NavLink>
             <NavLink to="/settings" className={linkCls}>
               <Cog6ToothIcon className="h-5 w-5" /> Settings
+            </NavLink>
+            <NavLink to="/search" className={linkCls}>
+              <MagnifyingGlassIcon className="h-5 w-5" /> Search
             </NavLink>
             
             {/* Admin-only navigation */}
