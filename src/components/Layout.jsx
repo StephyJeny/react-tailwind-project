@@ -25,6 +25,21 @@ export default function Layout({ children }) {
   const location = useLocation();
   const outlet = useOutlet();
 
+  React.useEffect(() => {
+    const path = location.pathname;
+    const titles = {
+      "/": t("title_dashboard"),
+      "/dashboard": t("title_dashboard"),
+      "/products": t("title_products"),
+      "/transactions": t("title_transactions"),
+      "/settings": t("title_settings"),
+      "/search": t("title_search"),
+      "/admin": t("title_admin"),
+      "/auth": t("title_settings") // fallback
+    };
+    document.title = titles[path] || t("app_title");
+  }, [location.pathname, t]);
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {

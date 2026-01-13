@@ -43,24 +43,24 @@ export default function Dashboard() {
       </motion.h1>
 
       <motion.div variants={reducedMotion ? undefined : item} className="grid sm:grid-cols-3 gap-4">
-        <Stat title="Total Income" value={income} variant="green" />
-        <Stat title="Total Expenses" value={expenses} variant="red" />
-        <Stat title="Current Balance" value={balance} variant="indigo" />
+        <Stat title={t('total_income') || 'Total Income'} value={income} variant="green" />
+        <Stat title={t('total_expenses') || 'Total Expenses'} value={expenses} variant="red" />
+        <Stat title={t('current_balance') || 'Current Balance'} value={balance} variant="indigo" />
       </motion.div>
 
       <div className="grid lg:grid-cols-2 gap-6">
         <motion.div variants={reducedMotion ? undefined : item} className="rounded-xl border border-white/20 shadow-xl bg-white/50 dark:bg-gray-900/50 backdrop-blur-md p-6">
-          <h2 className="font-semibold text-lg mb-4 text-gray-800 dark:text-gray-100">Balance History</h2>
+          <h2 className="font-semibold text-lg mb-4 text-gray-800 dark:text-gray-100">{t('balance_history')}</h2>
           <BalanceOverTime />
         </motion.div>
         <motion.div variants={reducedMotion ? undefined : item} className="rounded-xl border border-white/20 shadow-xl bg-white/50 dark:bg-gray-900/50 backdrop-blur-md p-6">
-          <h2 className="font-semibold text-lg mb-4 text-gray-800 dark:text-gray-100">Spending Distribution</h2>
+          <h2 className="font-semibold text-lg mb-4 text-gray-800 dark:text-gray-100">{t('spending_distribution')}</h2>
           <SpendingByCategory />
         </motion.div>
       </div>
 
       <motion.div variants={reducedMotion ? undefined : item} className="rounded-xl border border-white/20 shadow-xl bg-white/50 dark:bg-gray-900/50 backdrop-blur-md p-6">
-        <h2 className="font-semibold text-lg mb-4 text-gray-800 dark:text-gray-100">Recent Transactions</h2>
+        <h2 className="font-semibold text-lg mb-4 text-gray-800 dark:text-gray-100">{t('recent_transactions')}</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left opacity-70 border-b border-gray-200 dark:border-gray-700">

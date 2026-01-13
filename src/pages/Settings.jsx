@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import LanguageSelector from "../components/LanguageSelector";
 
 export default function Settings() {
-  const { user, clearAll, theme, toggleTheme, t } = useApp();
+  const { user, clearAll, theme, toggleTheme, t, reducedMotionOverride, setReducedMotionOverride } = useApp();
   const [activeTab, setActiveTab] = useState('profile');
 
   const tabs = [
@@ -181,13 +181,13 @@ function PreferencesSection({ theme, toggleTheme, clearAll }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
       <div>
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Appearance</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{useApp().t('appearance')}</h3>
         <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             {theme === 'dark' ? <MoonIcon className="h-6 w-6 text-indigo-400" /> : <SunIcon className="h-6 w-6 text-amber-500" />}
             <div>
-              <p className="font-medium text-gray-900 dark:text-white">Dark Mode</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Adjust the appearance of the application</p>
+              <p className="font-medium text-gray-900 dark:text-white">{useApp().t('dark_mode')}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{useApp().t('adjust_appearance')}</p>
             </div>
           </div>
           <button 
@@ -204,32 +204,56 @@ function PreferencesSection({ theme, toggleTheme, clearAll }) {
       </div>
 
       <div>
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Language</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{useApp().t('language')}</h3>
         <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700">
           <LanguageSelector />
         </div>
       </div>
 
       <div>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{useApp().t('reduce_motion')}</h3>
+        <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{useApp().t('reduce_motion_desc')}</p>
+          </div>
+          <div className="flex gap-2">
+            {['auto','on','off'].map(mode => (
+              <button
+                key={mode}
+                onClick={() => setReducedMotionOverride(mode)}
+                className={`px-3 py-1.5 rounded-md text-sm border ${
+                  reducedMotionOverride === mode
+                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700'
+                }`}
+              >
+                {useApp().t(`reduce_motion_${mode}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div>
         <h3 className="text-lg font-medium text-red-600 dark:text-red-400 mb-4 flex items-center gap-2">
           <ShieldExclamationIcon className="h-5 w-5" />
-          Danger Zone
+          {useApp().t('danger_zone')}
         </h3>
         <div className="p-4 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10">
-          <h4 className="font-medium text-red-900 dark:text-red-200">Delete all data</h4>
+          <h4 className="font-medium text-red-900 dark:text-red-200">{useApp().t('delete_all_data')}</h4>
           <p className="text-sm text-red-700 dark:text-red-300 mt-1 mb-4">
             This will permanently delete all your transactions and reset your account data. This action cannot be undone.
           </p>
           <button 
             onClick={() => {
-              if(window.confirm('Are you sure you want to delete all data?')) {
+              if(window.confirm(useApp().t('delete_all_data_confirm'))) {
                 clearAll();
                 toast.success('All data cleared successfully');
               }
             }} 
             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
           >
-            Clear All Data
+            {useApp().t('clear_all_data_button')}
           </button>
         </div>
       </div>
