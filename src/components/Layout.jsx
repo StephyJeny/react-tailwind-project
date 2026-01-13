@@ -50,12 +50,25 @@ export default function Layout({ children }) {
     };
     let title = titles[path] || t("app_title");
     let description = descriptions[path] || t("app_title");
-    if (path.startsWith("/products/")) {
+    if (path.startsWith("/products/category/")) {
+      const cat = decodeURIComponent(path.split("/")[3] || "");
+      if (cat) {
+        title = `${cat} — ${t("title_products")}`;
+        description = `${t("products_subtitle")} ${cat}`;
+      }
+    } else if (path.startsWith("/products/")) {
       const id = Number(path.split("/")[2]);
       const p = products.find((x) => x.id === id);
       if (p) {
         title = `${p.name} — ${t("app_title")}`;
         description = p.description || descriptions["/products"];
+      }
+    } else if (path === "/search") {
+      const params = new URLSearchParams(location.search || "");
+      const q = params.get("q");
+      if (q) {
+        title = `${t("title_search")} — ${q}`;
+        description = `${t("desc_search")} "${q}"`;
       }
     }
     document.title = title;
@@ -80,7 +93,8 @@ export default function Layout({ children }) {
       el.textContent = JSON.stringify(data);
     };
 
-    const canonical = window.location.origin + window.location.pathname;
+    const query = location.search || "";
+    const canonical = window.location.origin + window.location.pathname + query;
     upsertMeta("name", "description", description);
     upsertMeta("property", "og:title", title);
     upsertMeta("property", "og:description", description);
@@ -107,6 +121,15 @@ export default function Layout({ children }) {
       "/admin": [{ name: t("admin_panel"), item: window.location.origin + "/admin" }]
     };
     let crumbs = crumbMap[path] || [];
+    if (path.startsWith("/products/category/")) {
+      const cat = decodeURIComponent(path.split("/")[3] || "");
+      if (cat) {
+        crumbs = [
+          { name: t("nav_products"), item: window.location.origin + "/products" },
+          { name: cat, item: window.location.origin + "/products/category/" + encodeURIComponent(cat) }
+        ];
+      }
+    }
     if (path.startsWith("/products/")) {
       const id = Number(path.split("/")[2]);
       const p = products.find((x) => x.id === id);
@@ -158,7 +181,7 @@ export default function Layout({ children }) {
       "https://github.com/StephyJeny"
     ];
     upsertJsonLd("ld-organization", organization);
-  }, [location.pathname, t, language]);
+  }, [location.pathname, location.search, t, language]);
 
   React.useEffect(() => {
     document.documentElement.lang = language || "en";

@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { MagnifyingGlassIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 import { products, categories } from '../data/products';
 import ProductCard from '../components/ProductCard';
@@ -11,6 +13,10 @@ export default function Products() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('featured');
+  const { category } = useParams();
+  const navigate = useNavigate();
+  const LAST_CATEGORY_KEY = 'pf_last_category';
+  const initialized = useRef(false);
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
@@ -38,9 +44,34 @@ export default function Products() {
     }
   }, [filteredProducts, sortBy]);
 
+  useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+    if (!category) {
+      try {
+        const stored = JSON.parse(localStorage.getItem(LAST_CATEGORY_KEY) || '"All"');
+        if (stored && stored !== 'All') {
+          setSelectedCategory(stored);
+          navigate(`/products/category/${encodeURIComponent(stored)}`, { replace: true });
+        }
+      } catch {}
+    }
+  }, [category, navigate]);
+
+  useEffect(() => {
+    if (category) {
+      const decoded = decodeURIComponent(category);
+      if (selectedCategory !== decoded) setSelectedCategory(decoded);
+      try { localStorage.setItem(LAST_CATEGORY_KEY, JSON.stringify(decoded)); } catch {}
+    } else {
+      try { localStorage.setItem(LAST_CATEGORY_KEY, JSON.stringify(selectedCategory)); } catch {}
+    }
+  }, [category, selectedCategory]);
+
   React.useEffect(() => {
     const origin = window.location.origin;
-    const pageUrl = origin + "/products";
+    const pagePath = category ? `/products/category/${encodeURIComponent(category)}` : "/products";
+    const pageUrl = origin + pagePath;
     const upsertJsonLd = (id, data) => {
       let el = document.head.querySelector(`script[type="application/ld+json"]#${id}`);
       if (!el) {
@@ -88,7 +119,7 @@ export default function Products() {
     ];
     const json = { "@graph": graph };
     upsertJsonLd("ld-products", json);
-  }, [sortedProducts, t]);
+  }, [sortedProducts, t, category]);
 
   return (
     <div className="space-y-6">
@@ -125,7 +156,17 @@ export default function Products() {
             {categories.map((category) => (
               <button
                 key={category}
-                onClick={() => setSelectedCategory(category)}
+                onClick={() => {
+                  setSelectedCategory(category);
+                  try { localStorage.setItem(LAST_CATEGORY_KEY, JSON.stringify(category)); } catch {}
+                  if (category === 'All') {
+                    navigate('/products', { replace: true });
+                    toast.success('Cleared category filter');
+                  } else {
+                    navigate(`/products/category/${encodeURIComponent(category)}`, { replace: true });
+                    toast.success(`Category set to ${category}`);
+                  }
+                }}
                 className={`whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                   selectedCategory === category
                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none'
@@ -135,6 +176,20 @@ export default function Products() {
                 {category}
               </button>
             ))}
+            {selectedCategory !== 'All' && (
+              <button
+                onClick={() => {
+                  setSelectedCategory('All');
+                  try { localStorage.setItem(LAST_CATEGORY_KEY, JSON.stringify('All')); } catch {}
+                  navigate('/products', { replace: true });
+                  toast.success('Cleared category filter');
+                }}
+                className="ml-2 whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500"
+                aria-label="Clear category"
+              >
+                Clear category
+              </button>
+            )}
           </div>
 
           {/* Sort Dropdown */}

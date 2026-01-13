@@ -44,6 +44,7 @@ export default function App() {
           {/* Public routes (with layout) */}
           <Route element={<Layout />}>
             <Route path="/products" element={<Products />} />
+            <Route path="/products/category/:category" element={<Products />} />
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/search" element={<Search />} />
           </Route>
