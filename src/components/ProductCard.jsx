@@ -1,6 +1,8 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { StarIcon, ShoppingCartIcon } from '@heroicons/react/24/solid';
 import { StarIcon as StarOutlineIcon } from '@heroicons/react/24/outline';
+
 import { useApp } from '../state/AppContext';
 
 export default function ProductCard({ product }) {
@@ -41,14 +43,16 @@ export default function ProductCard({ product }) {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden group">
+    <div id={`product-${product.id}`} className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden group">
       {/* Product Image */}
       <div className="relative overflow-hidden">
-        <img
-          src={product.image}
-          alt={product.name}
-          className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-        />
+        <Link to={`/products/${product.id}`} aria-label={product.name}>
+          <img
+            src={product.image}
+            alt={product.name}
+            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        </Link>
         {!product.inStock && (
           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
             <span className="text-white font-semibold text-lg">Out of Stock</span>
@@ -70,7 +74,9 @@ export default function ProductCard({ product }) {
 
         {/* Product Name */}
         <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">
-          {product.name}
+          <Link to={`/products/${product.id}`} className="hover:underline">
+            {product.name}
+          </Link>
         </h3>
 
         {/* Rating */}

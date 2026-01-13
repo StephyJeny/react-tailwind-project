@@ -1,10 +1,6 @@
 import React, { useState } from "react";
 import { NavLink, useNavigate, useLocation, useOutlet } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { useApp } from "../state/AppContext";
-import ThemeToggle from "./ThemeToggle";
-import Cart from "./Cart";
-import LoadingSpinner from "./ui/LoadingSpinner";
 import { 
   ChartBarIcon, 
   Cog6ToothIcon, 
@@ -17,11 +13,16 @@ import {
   MagnifyingGlassIcon
 } from "@heroicons/react/24/outline";
 
+import { useApp } from "../state/AppContext";
+import ThemeToggle from "./ThemeToggle";
+import Cart from "./Cart";
+import LoadingSpinner from "./ui/LoadingSpinner";
+import { products } from "../data/products";
 export default function Layout({ children }) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigate = useNavigate();
-  const { user, logout, authError, t, reducedMotion } = useApp();
+  const { user, logout, authError, t, reducedMotion, language } = useApp();
   const location = useLocation();
   const outlet = useOutlet();
 
@@ -37,8 +38,131 @@ export default function Layout({ children }) {
       "/admin": t("title_admin"),
       "/auth": t("title_settings") // fallback
     };
-    document.title = titles[path] || t("app_title");
-  }, [location.pathname, t]);
+    const descriptions = {
+      "/": t("desc_dashboard"),
+      "/dashboard": t("desc_dashboard"),
+      "/products": t("desc_products"),
+      "/transactions": t("desc_transactions"),
+      "/settings": t("desc_settings"),
+      "/search": t("desc_search"),
+      "/admin": t("desc_admin"),
+      "/auth": t("desc_settings")
+    };
+    let title = titles[path] || t("app_title");
+    let description = descriptions[path] || t("app_title");
+    if (path.startsWith("/products/")) {
+      const id = Number(path.split("/")[2]);
+      const p = products.find((x) => x.id === id);
+      if (p) {
+        title = `${p.name} — ${t("app_title")}`;
+        description = p.description || descriptions["/products"];
+      }
+    }
+    document.title = title;
+
+    const upsertMeta = (attrName, attrValue, content) => {
+      let el = document.head.querySelector(`meta[${attrName}="${attrValue}"]`);
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute(attrName, attrValue);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", content);
+    };
+    const upsertJsonLd = (id, data) => {
+      let el = document.head.querySelector(`script[type="application/ld+json"]#${id}`);
+      if (!el) {
+        el = document.createElement("script");
+        el.type = "application/ld+json";
+        el.id = id;
+        document.head.appendChild(el);
+      }
+      el.textContent = JSON.stringify(data);
+    };
+
+    const canonical = window.location.origin + window.location.pathname;
+    upsertMeta("name", "description", description);
+    upsertMeta("property", "og:title", title);
+    upsertMeta("property", "og:description", description);
+    upsertMeta("property", "og:url", canonical);
+    upsertMeta("name", "twitter:title", title);
+    upsertMeta("name", "twitter:description", description);
+
+    let link = document.head.querySelector('link[rel="canonical"]');
+    if (!link) {
+      link = document.createElement("link");
+      link.setAttribute("rel", "canonical");
+      document.head.appendChild(link);
+    }
+    link.setAttribute("href", canonical);
+
+    const homeName = t("app_title");
+    const crumbMap = {
+      "/": [],
+      "/dashboard": [{ name: t("nav_dashboard"), item: window.location.origin + "/dashboard" }],
+      "/products": [{ name: t("nav_products"), item: window.location.origin + "/products" }],
+      "/transactions": [{ name: t("nav_transactions"), item: window.location.origin + "/transactions" }],
+      "/settings": [{ name: t("nav_settings"), item: window.location.origin + "/settings" }],
+      "/search": [{ name: t("nav_search"), item: window.location.origin + "/search" }],
+      "/admin": [{ name: t("admin_panel"), item: window.location.origin + "/admin" }]
+    };
+    let crumbs = crumbMap[path] || [];
+    if (path.startsWith("/products/")) {
+      const id = Number(path.split("/")[2]);
+      const p = products.find((x) => x.id === id);
+      if (p) {
+        crumbs = [
+          { name: t("nav_products"), item: window.location.origin + "/products" },
+          { name: p.category, item: window.location.origin + "/products" },
+          { name: p.name, item: canonical }
+        ];
+      }
+    }
+    const breadcrumb = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", position: 1, name: homeName, item: window.location.origin + "/" },
+        ...crumbs.map((c, i) => ({ "@type": "ListItem", position: i + 2, name: c.name, item: c.item }))
+      ]
+    };
+    upsertJsonLd("ld-breadcrumb", breadcrumb);
+
+    const website = {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": homeName,
+      "url": window.location.origin + "/",
+      "inLanguage": language || "en",
+      "potentialSearchAction": {
+        "@type": "SearchAction",
+        "target": window.location.origin + "/search?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    };
+    upsertJsonLd("ld-website", website);
+
+    const organization = {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": homeName,
+      "url": window.location.origin + "/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": window.location.origin + "/logo192.png"
+      }
+    };
+    organization.sameAs = [
+      window.location.origin + "/",
+      "https://StephyJeny.github.io/react-tailwind-project",
+      "https://github.com/StephyJeny"
+    ];
+    upsertJsonLd("ld-organization", organization);
+  }, [location.pathname, t, language]);
+
+  React.useEffect(() => {
+    document.documentElement.lang = language || "en";
+  }, [language]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -128,14 +252,14 @@ export default function Layout({ children }) {
                   </NavLink>
                   
                   {user?.role === 'admin' && (
-                    <NavLink
-                      to="/admin"
-                      className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      onClick={() => setShowUserMenu(false)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <ShieldCheckIcon className="h-4 w-4" />
-                      Admin Panel
+                  <NavLink
+                    to="/admin"
+                    className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <ShieldCheckIcon className="h-4 w-4" />
+                      {t('admin_panel')}
                     </div>
                   </NavLink>
                 )}
@@ -191,7 +315,7 @@ export default function Layout({ children }) {
             {/* Admin-only navigation */}
             {user?.role === 'admin' && (
               <NavLink to="/admin" className={linkCls}>
-                <ShieldCheckIcon className="h-5 w-5" /> Admin Panel
+                <ShieldCheckIcon className="h-5 w-5" /> {t('admin_panel')}
               </NavLink>
             )}
           </nav>

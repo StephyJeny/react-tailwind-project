@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useApp } from '../../state/AppContext';
-import { loginSchema, registerSchema, forgotPasswordSchema, resetPasswordSchema } from '../../schemas/authSchemas';
 import { toast } from 'sonner';
 import { 
   EyeIcon, 
@@ -15,12 +13,16 @@ import {
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
+import { useApp } from '../../state/AppContext';
+import { loginSchema, registerSchema, forgotPasswordSchema, resetPasswordSchema } from '../../schemas/authSchemas';
+
 const AuthForm = () => {
   const [authMode, setAuthMode] = useState('login'); // 'login', 'register', 'forgot', 'reset'
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [searchParams] = useSearchParams();
+  const [selectedRole, setSelectedRole] = useState('user');
   
   const navigate = useNavigate();
   const { 
@@ -67,7 +69,13 @@ const AuthForm = () => {
         case 'login':
           result = await login(data.email, data.password);
           if (result.success) {
-            navigate('/', { replace: true });
+            // Navigate based on role
+            const userRole = JSON.parse(localStorage.getItem('user_data') || '{}')?.role;
+            if (userRole === 'admin' && selectedRole === 'admin') {
+              navigate('/admin', { replace: true });
+            } else {
+              navigate('/dashboard', { replace: true });
+            }
           }
           break;
           
@@ -75,7 +83,8 @@ const AuthForm = () => {
           result = await register({
             name: data.name,
             email: data.email,
-            password: data.password
+            password: data.password,
+            role: selectedRole
           });
           if (result.success) {
             setMessage({ 
@@ -149,9 +158,9 @@ const AuthForm = () => {
       case 'register': return 'Create Account';
       case 'forgot': return 'Reset Password';
       case 'reset': return 'Set New Password';
-      default: return 'Sign In';
-    }
-  };
+          default: return 'Sign In';
+        }
+      };
 
   // Get submit button text
   const getSubmitText = () => {
@@ -348,6 +357,20 @@ const AuthForm = () => {
                 )}
               </div>
             )}
+          </div>
+
+          {/* Role selection */}
+          <div className="space-y-2">
+            <label htmlFor="role" className="text-sm text-gray-700 dark:text-gray-300">Role</label>
+            <select
+              id="role"
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            >
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
           </div>
 
           {/* Forgot password link */}

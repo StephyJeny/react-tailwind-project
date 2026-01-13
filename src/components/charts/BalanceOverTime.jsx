@@ -1,7 +1,8 @@
 import React, { useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { useApp } from "../../state/AppContext";
 import { parseISO, compareAsc } from "date-fns";
+
+import { useApp } from "../../state/AppContext";
 
 export default function BalanceOverTime() {
   const { transactions } = useApp();

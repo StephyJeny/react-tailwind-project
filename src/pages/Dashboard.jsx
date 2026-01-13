@@ -1,9 +1,10 @@
-import React, { useMemo } from "react";
-import { useApp } from "../state/AppContext";
+import React, { useMemo, Suspense, lazy } from "react";
 import { format } from "date-fns";
-import BalanceOverTime from "../components/charts/BalanceOverTime";
-import SpendingByCategory from "../components/charts/SpendingByCategory";
 import { motion } from "framer-motion";
+
+import { useApp } from "../state/AppContext";
+const BalanceOverTime = lazy(() => import("../components/charts/BalanceOverTime"));
+const SpendingByCategory = lazy(() => import("../components/charts/SpendingByCategory"));
 
 export default function Dashboard() {
   const { transactions, reducedMotion, t } = useApp();
@@ -51,11 +52,15 @@ export default function Dashboard() {
       <div className="grid lg:grid-cols-2 gap-6">
         <motion.div variants={reducedMotion ? undefined : item} className="rounded-xl border border-white/20 shadow-xl bg-white/50 dark:bg-gray-900/50 backdrop-blur-md p-6">
           <h2 className="font-semibold text-lg mb-4 text-gray-800 dark:text-gray-100">{t('balance_history')}</h2>
-          <BalanceOverTime />
+          <Suspense fallback={<div className="h-64 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />}>
+            <BalanceOverTime />
+          </Suspense>
         </motion.div>
         <motion.div variants={reducedMotion ? undefined : item} className="rounded-xl border border-white/20 shadow-xl bg-white/50 dark:bg-gray-900/50 backdrop-blur-md p-6">
           <h2 className="font-semibold text-lg mb-4 text-gray-800 dark:text-gray-100">{t('spending_distribution')}</h2>
-          <SpendingByCategory />
+          <Suspense fallback={<div className="h-64 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />}>
+            <SpendingByCategory />
+          </Suspense>
         </motion.div>
       </div>
 
@@ -65,11 +70,11 @@ export default function Dashboard() {
           <table className="w-full text-sm">
             <thead className="text-left opacity-70 border-b border-gray-200 dark:border-gray-700">
               <tr>
-                <th className="py-3 px-2">Date</th>
-                <th className="px-2">Type</th>
-                <th className="px-2">Category</th>
-                <th className="px-2">Note</th>
-                <th className="text-right px-2">Amount</th>
+                <th className="py-3 px-2">{t('date')}</th>
+                <th className="px-2">{t('type')}</th>
+                <th className="px-2">{t('category_label')}</th>
+                <th className="px-2">{t('note')}</th>
+                <th className="text-right px-2">{t('amount')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">

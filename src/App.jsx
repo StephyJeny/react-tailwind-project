@@ -1,14 +1,16 @@
 import React, { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "sonner";
+
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { useApp } from "./state/AppContext";
-import { Toaster } from "sonner";
 import LoadingSpinner from "./components/ui/LoadingSpinner";
 
 const AuthForm = lazy(() => import("./components/auth/AuthForm"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Products = lazy(() => import("./pages/Products"));
+const ProductDetail = lazy(() => import("./pages/ProductDetail"));
 const Transactions = lazy(() => import("./pages/Transactions"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Admin = lazy(() => import("./pages/Admin"));
@@ -39,20 +41,18 @@ export default function App() {
             } 
           />
           
-          {/* Protected routes */}
-          <Route
-            element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }
-          >
-            <Route path="/dashboard" element={<Dashboard />} />
+          {/* Public routes (with layout) */}
+          <Route element={<Layout />}>
             <Route path="/products" element={<Products />} />
+            <Route path="/products/:id" element={<ProductDetail />} />
+            <Route path="/search" element={<Search />} />
+          </Route>
+
+          {/* Protected routes (with layout) */}
+          <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/search" element={<Search />} />
-            
             <Route 
               path="/admin" 
               element={
@@ -63,11 +63,11 @@ export default function App() {
             />
           </Route>
           
-          {/* Redirect root to dashboard if authenticated, otherwise to auth */}
+          {/* Redirect root to dashboard if authenticated, otherwise to products */}
           <Route 
             path="/" 
             element={
-              <Navigate to={isAuthenticated ? "/dashboard" : "/auth"} replace />
+              <Navigate to={isAuthenticated ? "/dashboard" : "/products"} replace />
             } 
           />
 

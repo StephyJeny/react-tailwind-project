@@ -2,6 +2,7 @@ import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
+
 import { AppProvider } from '../state/AppContext';
 import AuthForm from '../components/auth/AuthForm';
 

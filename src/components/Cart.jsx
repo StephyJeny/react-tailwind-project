@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useApp } from '../state/AppContext';
 import { 
   ShoppingCartIcon, 
   XMarkIcon, 
@@ -7,6 +6,8 @@ import {
   MinusIcon,
   TrashIcon 
 } from '@heroicons/react/24/outline';
+
+import { useApp } from '../state/AppContext';
 
 export default function Cart() {
   const [isOpen, setIsOpen] = useState(false);

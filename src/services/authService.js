@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { tokenManager } from '../utils/auth';
+
+import { tokenManager, USER_KEY } from '../utils/auth';
 import { emailService } from './emailService';
 
 // For development, we'll simulate API calls
@@ -73,7 +74,7 @@ export const authService = {
           const newUser = {
             id: Date.now().toString(),
             ...userData,
-            role: 'user',
+            role: userData.role || 'user',
             isEmailVerified: false,
             verificationToken,
             verificationTokenExpiry: Date.now() + (24 * 60 * 60 * 1000), // 24 hours

@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { products, categories } from '../data/products';
-import ProductCard from '../components/ProductCard';
 import { MagnifyingGlassIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
+
+import { products, categories } from '../data/products';
+import ProductCard from '../components/ProductCard';
 import { useApp } from '../state/AppContext';
 
 export default function Products() {
@@ -36,6 +37,58 @@ export default function Products() {
         return list;
     }
   }, [filteredProducts, sortBy]);
+
+  React.useEffect(() => {
+    const origin = window.location.origin;
+    const pageUrl = origin + "/products";
+    const upsertJsonLd = (id, data) => {
+      let el = document.head.querySelector(`script[type="application/ld+json"]#${id}`);
+      if (!el) {
+        el = document.createElement("script");
+        el.type = "application/ld+json";
+        el.id = id;
+        document.head.appendChild(el);
+      }
+      el.textContent = JSON.stringify(data);
+    };
+    const itemList = {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "name": t("products_heading"),
+      "itemListElement": sortedProducts.slice(0, 8).map((p, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        url: pageUrl + "#product-" + p.id,
+        name: p.name
+      }))
+    };
+    const graph = [
+      itemList,
+      ...sortedProducts.slice(0, 8).map((p) => ({
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "@id": pageUrl + "#product-" + p.id,
+        "name": p.name,
+        "image": p.image,
+        "description": p.description,
+        "category": p.category,
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": p.rating,
+          "reviewCount": p.reviews
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": p.price,
+          "priceCurrency": "USD",
+          "availability": p.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+          "url": pageUrl + "#product-" + p.id
+        }
+      }))
+    ];
+    const json = { "@graph": graph };
+    upsertJsonLd("ld-products", json);
+  }, [sortedProducts, t]);
 
   return (
     <div className="space-y-6">

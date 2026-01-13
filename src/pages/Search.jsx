@@ -7,6 +7,7 @@ import {
   RefinementList,
   Configure,
 } from "react-instantsearch-hooks-web";
+
 import { searchClient, indexName } from "../services/algoliaClient";
 
 function Hit({ hit }) {

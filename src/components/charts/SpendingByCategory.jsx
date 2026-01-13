@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+
 import { useApp } from "../../state/AppContext";
 
 export default function SpendingByCategory() {

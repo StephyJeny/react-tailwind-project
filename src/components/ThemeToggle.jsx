@@ -1,6 +1,7 @@
 import React from "react";
-import { useApp } from "../state/AppContext";
 import { MoonIcon, SunIcon } from "@heroicons/react/24/solid";
+
+import { useApp } from "../state/AppContext";
 
 export default function ThemeToggle() {
   const { theme, setTheme } = useApp();

@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useApp } from "../state/AppContext";
 import { 
   UserCircleIcon, 
   KeyIcon, 
@@ -12,6 +11,8 @@ import {
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+
+import { useApp } from "../state/AppContext";
 import LanguageSelector from "../components/LanguageSelector";
 
 export default function Settings() {
@@ -67,6 +68,9 @@ export default function Settings() {
                 theme={theme} 
                 toggleTheme={toggleTheme} 
                 clearAll={clearAll} 
+                t={t}
+                reducedMotionOverride={reducedMotionOverride}
+                setReducedMotionOverride={setReducedMotionOverride}
               />
             )}
           </div>
@@ -177,17 +181,17 @@ function SecuritySection() {
   );
 }
 
-function PreferencesSection({ theme, toggleTheme, clearAll }) {
+function PreferencesSection({ theme, toggleTheme, clearAll, t, reducedMotionOverride, setReducedMotionOverride }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
       <div>
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{useApp().t('appearance')}</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('appearance')}</h3>
         <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             {theme === 'dark' ? <MoonIcon className="h-6 w-6 text-indigo-400" /> : <SunIcon className="h-6 w-6 text-amber-500" />}
             <div>
-              <p className="font-medium text-gray-900 dark:text-white">{useApp().t('dark_mode')}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{useApp().t('adjust_appearance')}</p>
+              <p className="font-medium text-gray-900 dark:text-white">{t('dark_mode')}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('adjust_appearance')}</p>
             </div>
           </div>
           <button 
@@ -204,17 +208,17 @@ function PreferencesSection({ theme, toggleTheme, clearAll }) {
       </div>
 
       <div>
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{useApp().t('language')}</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('language')}</h3>
         <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700">
           <LanguageSelector />
         </div>
       </div>
 
       <div>
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{useApp().t('reduce_motion')}</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('reduce_motion')}</h3>
         <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{useApp().t('reduce_motion_desc')}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{t('reduce_motion_desc')}</p>
           </div>
           <div className="flex gap-2">
             {['auto','on','off'].map(mode => (
@@ -227,7 +231,7 @@ function PreferencesSection({ theme, toggleTheme, clearAll }) {
                     : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700'
                 }`}
               >
-                {useApp().t(`reduce_motion_${mode}`)}
+                {t(`reduce_motion_${mode}`)}
               </button>
             ))}
           </div>
@@ -237,23 +241,23 @@ function PreferencesSection({ theme, toggleTheme, clearAll }) {
       <div>
         <h3 className="text-lg font-medium text-red-600 dark:text-red-400 mb-4 flex items-center gap-2">
           <ShieldExclamationIcon className="h-5 w-5" />
-          {useApp().t('danger_zone')}
+          {t('danger_zone')}
         </h3>
         <div className="p-4 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10">
-          <h4 className="font-medium text-red-900 dark:text-red-200">{useApp().t('delete_all_data')}</h4>
+          <h4 className="font-medium text-red-900 dark:text-red-200">{t('delete_all_data')}</h4>
           <p className="text-sm text-red-700 dark:text-red-300 mt-1 mb-4">
             This will permanently delete all your transactions and reset your account data. This action cannot be undone.
           </p>
           <button 
             onClick={() => {
-              if(window.confirm(useApp().t('delete_all_data_confirm'))) {
+              if(window.confirm(t('delete_all_data_confirm'))) {
                 clearAll();
                 toast.success('All data cleared successfully');
               }
             }} 
             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
           >
-            {useApp().t('clear_all_data_button')}
+            {t('clear_all_data_button')}
           </button>
         </div>
       </div>
