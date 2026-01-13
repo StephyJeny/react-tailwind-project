@@ -232,6 +232,9 @@ export default function Layout({ children }) {
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
+                aria-haspopup="menu"
+                aria-expanded={showUserMenu}
+                aria-controls="user-menu"
                 className="flex items-center gap-2 text-sm rounded-lg px-3 py-2 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <UserCircleIcon className="h-5 w-5" />
@@ -244,9 +247,13 @@ export default function Layout({ children }) {
 
               {/* Dropdown Menu */}
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+                <div
+                  id="user-menu"
+                  role="menu"
+                  className="absolute right-0 mt-2 w-64 sm:w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50"
+                >
                   <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    <p className="text_sm font-medium text-gray-900 dark:text-white">
                       {user?.name}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -263,34 +270,37 @@ export default function Layout({ children }) {
                     )}
                   </div>
                   
-                  <NavLink
-                    to="/settings"
-                    className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    onClick={() => setShowUserMenu(false)}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { setShowUserMenu(false); navigate('/settings'); }}
+                    className="w-full text-left block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                   >
                     <div className="flex items-center gap-2">
                       <Cog6ToothIcon className="h-4 w-4" />
                       {t('nav_settings')}
                     </div>
-                  </NavLink>
+                  </button>
                   
                   {user?.role === 'admin' && (
-                  <NavLink
-                    to="/admin"
-                    className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    onClick={() => setShowUserMenu(false)}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { setShowUserMenu(false); navigate('/admin'); }}
+                    className="w-full text-left block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                   >
                     <div className="flex items-center gap-2">
                       <ShieldCheckIcon className="h-4 w-4" />
                       {t('admin_panel')}
                     </div>
-                  </NavLink>
+                  </button>
                 )}
                   
                   <button
                     onClick={handleLogout}
                     disabled={isLoggingOut}
-                    className="w-full text-left px-4 py-2 text-sm text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
+                    role="menuitem"
+                    className="w-full text-left px-4 py-2 text-sm text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 cursor-pointer"
                   >
                     <div className="flex items-center gap-2">
                       {isLoggingOut ? (
