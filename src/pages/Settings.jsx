@@ -12,15 +12,16 @@ import {
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import LanguageSelector from "../components/LanguageSelector";
 
 export default function Settings() {
-  const { user, clearAll, theme, toggleTheme } = useApp();
+  const { user, clearAll, theme, toggleTheme, t } = useApp();
   const [activeTab, setActiveTab] = useState('profile');
 
   const tabs = [
-    { id: 'profile', label: 'Profile', icon: UserCircleIcon },
-    { id: 'security', label: 'Security', icon: KeyIcon },
-    { id: 'preferences', label: 'Preferences', icon: BellIcon },
+    { id: 'profile', label: t('nav_dashboard') === 'nav_dashboard' ? 'Profile' : t('Profile'), icon: UserCircleIcon },
+    { id: 'security', label: t('Security') || 'Security', icon: KeyIcon },
+    { id: 'preferences', label: t('nav_settings') === 'nav_settings' ? 'Preferences' : t('Preferences'), icon: BellIcon },
   ];
 
   return (
@@ -30,7 +31,7 @@ export default function Settings() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Settings</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('nav_settings')}</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-2">Manage your account settings and preferences.</p>
       </motion.div>
 
@@ -199,6 +200,13 @@ function PreferencesSection({ theme, toggleTheme, clearAll }) {
               theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
             }`} />
           </button>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Language</h3>
+        <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+          <LanguageSelector />
         </div>
       </div>
 

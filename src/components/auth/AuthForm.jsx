@@ -184,6 +184,27 @@ const AuthForm = () => {
           )}
         </div>
 
+        {(message.text || authError) && (
+          <div
+            role="alert"
+            aria-live="polite"
+            className={`rounded-md border p-3 flex items-start gap-2 ${
+              (message.type === 'success' || (!message.type && !authError))
+                ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-200'
+                : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200'
+            }`}
+          >
+            {message.type === 'success' || (!message.type && !authError) ? (
+              <CheckCircleIcon className="h-5 w-5 flex-shrink-0" />
+            ) : (
+              <ExclamationTriangleIcon className="h-5 w-5 flex-shrink-0" />
+            )}
+            <p className="text-sm">
+              {authError || message.text}
+            </p>
+          </div>
+        )}
+
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">
             {/* Name field for registration */}
@@ -199,13 +220,17 @@ const AuthForm = () => {
                   <input
                     {...formRegister('name')}
                     type="text"
+                    id="name"
                     autoComplete="name"
+                    aria-invalid={!!errors.name || undefined}
+                    aria-describedby="name-error"
+                    required
                     className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                     placeholder="Full Name"
                   />
                 </div>
                 {errors.name && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name.message}</p>
+                  <p id="name-error" className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name.message}</p>
                 )}
               </div>
             )}
@@ -223,13 +248,17 @@ const AuthForm = () => {
                   <input
                     {...formRegister('email')}
                     type="email"
+                    id="email"
                     autoComplete="email"
+                    aria-invalid={!!errors.email || undefined}
+                    aria-describedby="email-error"
+                    required
                     className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                     placeholder="Email address"
                   />
                 </div>
                 {errors.email && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email.message}</p>
+                  <p id="email-error" className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email.message}</p>
                 )}
               </div>
             )}
@@ -247,7 +276,11 @@ const AuthForm = () => {
                   <input
                     {...formRegister('password')}
                     type={showPassword ? 'text' : 'password'}
+                    id="password"
                     autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
+                    aria-invalid={!!errors.password || undefined}
+                    aria-describedby="password-error"
+                    required
                     className="appearance-none relative block w-full px-3 py-2 pl-10 pr-10 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                     placeholder="Password"
                   />
@@ -255,6 +288,8 @@ const AuthForm = () => {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-pressed={showPassword}
                       className="text-gray-400 hover:text-gray-500 focus:outline-none"
                     >
                       {showPassword ? (
@@ -266,7 +301,7 @@ const AuthForm = () => {
                   </div>
                 </div>
                 {errors.password && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password.message}</p>
+                  <p id="password-error" className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password.message}</p>
                 )}
               </div>
             )}
@@ -284,7 +319,11 @@ const AuthForm = () => {
                   <input
                     {...formRegister('confirmPassword')}
                     type={showConfirmPassword ? 'text' : 'password'}
+                    id="confirmPassword"
                     autoComplete="new-password"
+                    aria-invalid={!!errors.confirmPassword || undefined}
+                    aria-describedby="confirmPassword-error"
+                    required
                     className="appearance-none relative block w-full px-3 py-2 pl-10 pr-10 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                     placeholder="Confirm Password"
                   />
@@ -292,6 +331,8 @@ const AuthForm = () => {
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                      aria-pressed={showConfirmPassword}
                       className="text-gray-400 hover:text-gray-500 focus:outline-none"
                     >
                       {showConfirmPassword ? (
@@ -303,7 +344,7 @@ const AuthForm = () => {
                   </div>
                 </div>
                 {errors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.confirmPassword.message}</p>
+                  <p id="confirmPassword-error" className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.confirmPassword.message}</p>
                 )}
               </div>
             )}

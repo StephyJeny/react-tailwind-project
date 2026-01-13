@@ -21,7 +21,7 @@ export default function Layout({ children }) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigate = useNavigate();
-  const { user, logout, authError } = useApp();
+  const { user, logout, authError, t, reducedMotion } = useApp();
   const location = useLocation();
   const outlet = useOutlet();
 
@@ -59,7 +59,7 @@ export default function Layout({ children }) {
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 font-semibold">
             <BanknotesIcon className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-            <span>Personal Finance & Store</span>
+            <span>{t('app_title')}</span>
           </div>
           
           <div className="flex items-center gap-3">
@@ -108,7 +108,7 @@ export default function Layout({ children }) {
                   >
                     <div className="flex items-center gap-2">
                       <Cog6ToothIcon className="h-4 w-4" />
-                      Settings
+                      {t('nav_settings')}
                     </div>
                   </NavLink>
                   
@@ -120,10 +120,10 @@ export default function Layout({ children }) {
                     >
                       <div className="flex items-center gap-2">
                         <ShieldCheckIcon className="h-4 w-4" />
-                        Admin Panel
-                      </div>
-                    </NavLink>
-                  )}
+                      Admin Panel
+                    </div>
+                  </NavLink>
+                )}
                   
                   <button
                     onClick={handleLogout}
@@ -136,7 +136,7 @@ export default function Layout({ children }) {
                       ) : (
                         <ArrowRightOnRectangleIcon className="h-4 w-4" />
                       )}
-                      {isLoggingOut ? 'Signing out...' : 'Sign out'}
+                      {isLoggingOut ? 'Signing out...' : t('sign_out')}
                     </div>
                   </button>
                 </div>
@@ -158,19 +158,19 @@ export default function Layout({ children }) {
         <aside className="md:sticky md:top-16 h-max">
           <nav className="space-y-2">
             <NavLink to="/" end className={linkCls}>
-              <ChartBarIcon className="h-5 w-5" /> Dashboard
+              <ChartBarIcon className="h-5 w-5" /> {t('nav_dashboard')}
             </NavLink>
             <NavLink to="/products" className={linkCls}>
-              <ShoppingBagIcon className="h-5 w-5" /> Products
+              <ShoppingBagIcon className="h-5 w-5" /> {t('nav_products')}
             </NavLink>
             <NavLink to="/transactions" className={linkCls}>
-              <BanknotesIcon className="h-5 w-5" /> Transactions
+              <BanknotesIcon className="h-5 w-5" /> {t('nav_transactions')}
             </NavLink>
             <NavLink to="/settings" className={linkCls}>
-              <Cog6ToothIcon className="h-5 w-5" /> Settings
+              <Cog6ToothIcon className="h-5 w-5" /> {t('nav_settings')}
             </NavLink>
             <NavLink to="/search" className={linkCls}>
-              <MagnifyingGlassIcon className="h-5 w-5" /> Search
+              <MagnifyingGlassIcon className="h-5 w-5" /> {t('nav_search')}
             </NavLink>
             
             {/* Admin-only navigation */}
@@ -185,10 +185,10 @@ export default function Layout({ children }) {
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
+              initial={reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+              animate={reducedMotion ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
+              exit={reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -10 }}
+              transition={{ duration: reducedMotion ? 0 : 0.2 }}
               className="h-full"
             >
               {outlet || children}

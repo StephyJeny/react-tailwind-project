@@ -1,18 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { products, categories } from '../data/products';
 import ProductCard from '../components/ProductCard';
-import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useApp } from '../state/AppContext';
 
 export default function Products() {
+  const { reducedMotion } = useApp();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('featured');
 
-  const filteredProducts = products.filter((product) => {
-    const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
+      const term = searchTerm.trim().toLowerCase();
+      const matchesSearch =
+        !term ||
+        product.name.toLowerCase().includes(term) ||
+        product.description.toLowerCase().includes(term);
+      return matchesCategory && matchesSearch;
+    });
+  }, [selectedCategory, searchTerm]);
+
+  const sortedProducts = useMemo(() => {
+    const list = [...filteredProducts];
+    switch (sortBy) {
+      case 'price-asc':
+        return list.sort((a, b) => a.price - b.price);
+      case 'price-desc':
+        return list.sort((a, b) => b.price - a.price);
+      case 'rating':
+        return list.sort((a, b) => b.rating - a.rating);
+      default:
+        return list;
+    }
+  }, [filteredProducts, sortBy]);
 
   return (
     <div className="space-y-6">
@@ -82,18 +105,18 @@ export default function Products() {
 
       {/* Products Grid */}
       <motion.div 
-        layout
+        layout={!reducedMotion}
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
       >
         <AnimatePresence>
-          {filteredProducts.map((product) => (
+          {sortedProducts.map((product) => (
             <motion.div
-              layout
+              layout={!reducedMotion}
               key={product.id}
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={reducedMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.2 }}
+              exit={reducedMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.9 }}
+              transition={{ duration: reducedMotion ? 0 : 0.2 }}
             >
               <ProductCard product={product} />
             </motion.div>
@@ -102,7 +125,7 @@ export default function Products() {
       </motion.div>
 
       {/* No Products Found */}
-      {filteredProducts.length === 0 && (
+      {sortedProducts.length === 0 && (
         <div className="text-center py-12">
           <div className="text-gray-400 dark:text-gray-500 text-lg">
             No products found matching your criteria.

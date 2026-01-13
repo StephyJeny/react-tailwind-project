@@ -6,7 +6,7 @@ import SpendingByCategory from "../components/charts/SpendingByCategory";
 import { motion } from "framer-motion";
 
 export default function Dashboard() {
-  const { transactions } = useApp();
+  const { transactions, reducedMotion, t } = useApp();
 
   const { income, expenses, balance } = useMemo(() => {
     const income = transactions.filter(t => t.type === "income").reduce((a,b)=>a+Number(b.amount||0),0);
@@ -33,33 +33,33 @@ export default function Dashboard() {
 
   return (
     <motion.div 
-      variants={container}
-      initial="hidden"
-      animate="show"
+      variants={reducedMotion ? undefined : container}
+      initial={reducedMotion ? undefined : "hidden"}
+      animate={reducedMotion ? undefined : "show"}
       className="space-y-6"
     >
-      <motion.h1 variants={item} className="text-2xl font-bold bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
-        Dashboard Overview
+      <motion.h1 variants={reducedMotion ? undefined : item} className="text-2xl font-bold bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
+        {t('nav_dashboard')}
       </motion.h1>
 
-      <motion.div variants={item} className="grid sm:grid-cols-3 gap-4">
+      <motion.div variants={reducedMotion ? undefined : item} className="grid sm:grid-cols-3 gap-4">
         <Stat title="Total Income" value={income} variant="green" />
         <Stat title="Total Expenses" value={expenses} variant="red" />
         <Stat title="Current Balance" value={balance} variant="indigo" />
       </motion.div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <motion.div variants={item} className="rounded-xl border border-white/20 shadow-xl bg-white/50 dark:bg-gray-900/50 backdrop-blur-md p-6 transition-transform hover:scale-[1.01]">
+        <motion.div variants={reducedMotion ? undefined : item} className="rounded-xl border border-white/20 shadow-xl bg-white/50 dark:bg-gray-900/50 backdrop-blur-md p-6">
           <h2 className="font-semibold text-lg mb-4 text-gray-800 dark:text-gray-100">Balance History</h2>
           <BalanceOverTime />
         </motion.div>
-        <motion.div variants={item} className="rounded-xl border border-white/20 shadow-xl bg-white/50 dark:bg-gray-900/50 backdrop-blur-md p-6 transition-transform hover:scale-[1.01]">
+        <motion.div variants={reducedMotion ? undefined : item} className="rounded-xl border border-white/20 shadow-xl bg-white/50 dark:bg-gray-900/50 backdrop-blur-md p-6">
           <h2 className="font-semibold text-lg mb-4 text-gray-800 dark:text-gray-100">Spending Distribution</h2>
           <SpendingByCategory />
         </motion.div>
       </div>
 
-      <motion.div variants={item} className="rounded-xl border border-white/20 shadow-xl bg-white/50 dark:bg-gray-900/50 backdrop-blur-md p-6">
+      <motion.div variants={reducedMotion ? undefined : item} className="rounded-xl border border-white/20 shadow-xl bg-white/50 dark:bg-gray-900/50 backdrop-blur-md p-6">
         <h2 className="font-semibold text-lg mb-4 text-gray-800 dark:text-gray-100">Recent Transactions</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
