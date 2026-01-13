@@ -64,11 +64,11 @@ export default function App() {
             />
           </Route>
           
-          {/* Redirect root to dashboard if authenticated, otherwise to products */}
+          {/* Redirect root to dashboard if authenticated, otherwise to auth */}
           <Route 
             path="/" 
             element={
-              <Navigate to={isAuthenticated ? "/dashboard" : "/products"} replace />
+              <Navigate to={isAuthenticated ? "/dashboard" : "/auth"} replace />
             } 
           />
 
