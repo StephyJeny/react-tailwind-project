@@ -6,7 +6,8 @@ import axios from 'axios';
 class EmailService {
   constructor() {
     this.API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-    this.provider = 'api'; // 'api' posts to backend; 'console' for dev preview
+    const envProvider = import.meta.env.VITE_EMAIL_PROVIDER;
+    this.provider = envProvider || (import.meta.env.DEV ? 'console' : 'api');
   }
 
   async sendVerificationEmail(email, verificationToken, userName) {
