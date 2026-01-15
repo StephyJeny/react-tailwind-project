@@ -7,7 +7,7 @@ class EmailService {
   constructor() {
     this.API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
     const envProvider = import.meta.env.VITE_EMAIL_PROVIDER;
-    this.provider = envProvider || (import.meta.env.DEV ? 'console' : 'api');
+    this.provider = envProvider || 'api';
   }
 
   async sendVerificationEmail(email, verificationToken, userName) {
@@ -90,20 +90,15 @@ class EmailService {
           return { success: true, messageId: response.data.messageId };
         } catch (error) {
           console.error('Email API error:', error);
-          // Fall back to console preview in development
-          this.showDevNotification(emailContent);
-          throw new Error('Failed to send email via API');
+          const apiMsg = error?.response?.data?.details || error?.response?.data?.error || 'Failed to send email via API';
+          throw new Error(apiMsg);
         }
 
       case 'console':
-        // Development mode - log to console
-        console.log('📧 Email would be sent:');
-        console.log('To:', emailContent.to);
-        console.log('Subject:', emailContent.subject);
-        console.log('Content:', emailContent.html);
-        
-        // Show notification in UI for development
-        this.showDevNotification(emailContent);
+        // Development mode - no UI preview
+        console.log('📧 Dev email (console provider):', {
+          to: emailContent.to, subject: emailContent.subject
+        });
         return { success: true, messageId: 'dev-' + Date.now() };
 
       default:
@@ -120,45 +115,7 @@ class EmailService {
     return `${text}${suffix}`.trim().replace(/\s{2,}/g, ' ');
   }
 
-  showDevNotification(emailContent) {
-    // Extract verification/reset URL from email content
-    const urlMatch = emailContent.html.match(/href="([^"]*(?:verify|token)[^"]*)"/);
-    if (urlMatch) {
-      const url = urlMatch[1];
-      
-      // Create a temporary notification
-      const notification = document.createElement('div');
-      notification.style.cssText = `
-        position: fixed; top: 20px; right: 20px; z-index: 10000;
-        background: #4F46E5; color: white; padding: 16px; border-radius: 8px;
-        max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        font-family: Arial, sans-serif; font-size: 14px;
-      `;
-      
-      notification.innerHTML = `
-        <div style="font-weight: bold; margin-bottom: 8px;">📧 Development Email</div>
-        <div style="margin-bottom: 8px;">To: ${emailContent.to}</div>
-        <div style="margin-bottom: 12px;">${emailContent.subject}</div>
-        <a href="${url}" style="color: #93C5FD; text-decoration: underline;" 
-           onclick="this.parentElement.remove()">
-          Click here to ${emailContent.subject.includes('Verify') ? 'verify' : 'reset'}
-        </a>
-        <button onclick="this.parentElement.remove()" 
-                style="float: right; background: none; border: none; color: white; cursor: pointer; font-size: 16px;">
-          ×
-        </button>
-      `;
-      
-      document.body.appendChild(notification);
-      
-      // Auto-remove after 30 seconds
-      setTimeout(() => {
-        if (notification.parentElement) {
-          notification.remove();
-        }
-      }, 30000);
-    }
-  }
+  // Removed development popup for privacy and clarity
 }
 
 export const emailService = new EmailService();
