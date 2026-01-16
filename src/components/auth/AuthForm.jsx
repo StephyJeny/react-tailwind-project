@@ -31,6 +31,7 @@ const AuthForm = () => {
     requestPasswordReset, 
     resetPassword, 
     verifyEmail,
+    resendVerification,
     isLoading, 
     authError, 
     clearAuthError 
@@ -208,9 +209,32 @@ const AuthForm = () => {
             ) : (
               <ExclamationTriangleIcon className="h-5 w-5 flex-shrink-0" />
             )}
-            <p className="text-sm">
-              {authError || message.text}
-            </p>
+            <div className="flex-1">
+              <p className="text-sm">
+                {authError || message.text}
+              </p>
+              {authError && /verify your email/i.test(authError) && authMode === 'login' && (
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const email = watch('email');
+                      if (!email) return;
+                      const result = await resendVerification(email);
+                      if (result.success) {
+                        setMessage({ type: 'success', text: result.message });
+                        clearAuthError();
+                      } else {
+                        setMessage({ type: 'error', text: result.error });
+                      }
+                    }}
+                    className="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+                  >
+                    Resend verification email
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

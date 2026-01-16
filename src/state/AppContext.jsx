@@ -192,6 +192,18 @@ export function AppProvider({ children }) {
     }
   };
 
+  const resendVerification = async (email) => {
+    try {
+      setIsLoading(true);
+      const response = await authService.resendVerification(email);
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const resetPassword = async (token, newPassword) => {
     try {
       setIsLoading(true);
@@ -517,6 +529,7 @@ export function AppProvider({ children }) {
     logout,
     verifyEmail,
     requestPasswordReset,
+    resendVerification,
     resetPassword,
     clearAuthError,
     

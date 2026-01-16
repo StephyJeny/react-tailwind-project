@@ -85,16 +85,21 @@ export const authService = {
           localStorage.setItem('users', JSON.stringify(existingUsers));
           
           // Send verification email
-          await emailService.sendVerificationEmail(
-            userData.email, 
-            verificationToken, 
-            userData.name
-          );
+          let emailNotice = 'Registration successful! Please check your email to verify your account.';
+          try {
+            await emailService.sendVerificationEmail(
+              userData.email, 
+              verificationToken, 
+              userData.name
+            );
+          } catch (err) {
+            emailNotice = 'Registration successful, but we could not send the verification email. Please use “Resend verification email” and check your email settings.';
+          }
           
           resolve({
             data: {
               user: { ...newUser, password: undefined, verificationToken: undefined },
-              message: 'Registration successful! Please check your email to verify your account.'
+              message: emailNotice
             }
           });
         } catch (error) {
@@ -213,6 +218,49 @@ export const authService = {
 
   // (removed duplicate verifyEmail and requestPasswordReset)
 
+  // Resend verification email
+  resendVerification: async (email) => {
+    return new Promise(async (resolve, reject) => {
+      setTimeout(async () => {
+        try {
+          const users = JSON.parse(localStorage.getItem('users') || '[]');
+          const userIndex = users.findIndex(u => u.email === email);
+          
+          if (userIndex === -1) {
+            reject(new Error('Email not found'));
+            return;
+          }
+          
+          if (users[userIndex].isEmailVerified) {
+            reject(new Error('Email already verified'));
+            return;
+          }
+          
+          let token = users[userIndex].verificationToken;
+          const expired = !users[userIndex].verificationTokenExpiry || users[userIndex].verificationTokenExpiry <= Date.now();
+          if (!token || expired) {
+            token = `verify_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            users[userIndex].verificationToken = token;
+            users[userIndex].verificationTokenExpiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
+            localStorage.setItem('users', JSON.stringify(users));
+          }
+          
+          await emailService.sendVerificationEmail(
+            users[userIndex].email,
+            token,
+            users[userIndex].name
+          );
+          
+          resolve({
+            data: { message: 'Verification email resent! Please check your inbox.' }
+          });
+        } catch (error) {
+          reject(error);
+        }
+      }, 800);
+    });
+  },
+ 
   // Reset password
   resetPassword: async (token, newPassword) => {
     return new Promise((resolve, reject) => {
