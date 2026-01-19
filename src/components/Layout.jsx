@@ -311,7 +311,7 @@ export default function Layout({ children }) {
       {/* Click outside to close user menu */}
       {showUserMenu && (
         <div 
-          className="fixed inset-0 z-40" 
+          className="fixed inset-0 z-20" 
           onClick={() => setShowUserMenu(false)}
         />
       )}
