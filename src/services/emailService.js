@@ -87,9 +87,6 @@ class EmailService {
           }, {
             timeout: 10000
           });
-          if (response.data?.fallback) {
-            throw new Error('Email service not fully configured');
-          }
           return { success: true, messageId: response.data.messageId };
         } catch (error) {
           console.error('Email API error:', error);
