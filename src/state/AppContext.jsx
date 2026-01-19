@@ -132,6 +132,30 @@ export function AppProvider({ children }) {
     }
   };
 
+  const loginWithGoogle = async () => {
+    try {
+      setIsLoading(true);
+      setAuthError(null);
+      
+      const response = await authService.loginWithGoogle();
+      const { user: userData, accessToken } = response.data;
+      
+      tokenManager.setToken(accessToken);
+      storage.set("user_data", userData);
+      
+      setUser(userData);
+      setIsAuthenticated(true);
+      startSessionTimer(handleSessionTimeout);
+      
+      return { success: true };
+    } catch (error) {
+      setAuthError(error.message);
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const register = async (userData) => {
     try {
       setIsLoading(true);
