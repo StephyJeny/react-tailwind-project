@@ -1,5 +1,17 @@
 import axios from 'axios';
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signOut, 
+  sendPasswordResetEmail,
+  sendEmailVerification,
+  signInWithPopup,
+  updateProfile,
+  onAuthStateChanged
+} from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
+import { auth, db, googleProvider } from './firebase';
 import { tokenManager, USER_KEY } from '../utils/auth';
 import { emailService } from './emailService';
 
@@ -15,10 +27,16 @@ const api = axios.create({
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
-  (config) => {
-    const token = tokenManager.getToken();
-    if (token) {
+  async (config) => {
+    // If we have a current user, get the latest token
+    if (auth.currentUser) {
+      const token = await auth.currentUser.getIdToken();
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      const token = tokenManager.getToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
@@ -29,296 +47,233 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-    
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      
-      try {
-        const refreshToken = tokenManager.getRefreshToken();
-        if (refreshToken) {
-          const response = await refreshAuthToken(refreshToken);
-          tokenManager.setToken(response.data.accessToken);
-          originalRequest.headers.Authorization = `Bearer ${response.data.accessToken}`;
-          return api(originalRequest);
-        }
-      } catch (refreshError) {
-        tokenManager.clearAll();
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
-      }
-    }
-    
+    // Firebase SDK handles token refresh automatically
     return Promise.reject(error);
   }
 );
 
-// Simulated API functions (replace with real API calls)
 export const authService = {
   // Register new user
   register: async (userData) => {
-    return new Promise(async (resolve, reject) => {
-      setTimeout(async () => {
-        try {
-          const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
-          const emailExists = existingUsers.some(user => user.email === userData.email);
-          
-          if (emailExists) {
-            reject(new Error('Email already exists'));
-            return;
-          }
-          
-          // Generate verification token
-          const verificationToken = `verify_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          
-          const newUser = {
-            id: Date.now().toString(),
-            ...userData,
-            role: userData.role || 'user',
-            isEmailVerified: false,
-            verificationToken,
-            verificationTokenExpiry: Date.now() + (24 * 60 * 60 * 1000), // 24 hours
-            createdAt: new Date().toISOString(),
-          };
-          
-          existingUsers.push(newUser);
-          localStorage.setItem('users', JSON.stringify(existingUsers));
-          
-          // Send verification email
-          let emailNotice = 'Registration successful! Please check your email to verify your account.';
-          try {
-            await emailService.sendVerificationEmail(
-              userData.email, 
-              verificationToken, 
-              userData.name
-            );
-          } catch (err) {
-            emailNotice = 'Registration successful, but we could not send the verification email. Please use “Resend verification email” and check your email settings.';
-          }
-          
-          resolve({
-            data: {
-              user: { ...newUser, password: undefined, verificationToken: undefined },
-              message: emailNotice
-            }
-          });
-        } catch (error) {
-          reject(error);
-        }
-      }, 1000);
-    });
-  },
+    try {
+      // 1. Create user in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+      const user = userCredential.user;
 
-  // Verify email
-  verifyEmail: async (token) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const userIndex = users.findIndex(u => 
-          u.verificationToken === token && 
-          u.verificationTokenExpiry > Date.now()
-        );
-        
-        if (userIndex === -1) {
-          reject(new Error('Invalid or expired verification token'));
-          return;
-        }
-        
-        users[userIndex].isEmailVerified = true;
-        users[userIndex].verificationToken = null;
-        users[userIndex].verificationTokenExpiry = null;
-        localStorage.setItem('users', JSON.stringify(users));
-        
-        resolve({
-          data: { message: 'Email verified successfully! You can now log in.' }
-        });
-      }, 1000);
-    });
-  },
+      // 2. Update profile name
+      await updateProfile(user, {
+        displayName: userData.name
+      });
 
-  // Request password reset
-  requestPasswordReset: async (email) => {
-    return new Promise(async (resolve, reject) => {
-      setTimeout(async () => {
-        try {
-          const users = JSON.parse(localStorage.getItem('users') || '[]');
-          const userIndex = users.findIndex(u => u.email === email);
-          
-          if (userIndex === -1) {
-            reject(new Error('Email not found'));
-            return;
-          }
-          
-          // Generate reset token
-          const resetToken = `reset_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          
-          users[userIndex].resetToken = resetToken;
-          users[userIndex].resetTokenExpiry = Date.now() + (60 * 60 * 1000); // 1 hour
-          localStorage.setItem('users', JSON.stringify(users));
-          
-          // Send password reset email
-          await emailService.sendPasswordResetEmail(
-            email, 
-            resetToken, 
-            users[userIndex].name
-          );
-          
-          resolve({
-            data: { message: 'Password reset email sent! Please check your inbox.' }
-          });
-        } catch (error) {
-          reject(error);
+      // 3. Create user document in Firestore
+      const newUser = {
+        id: user.uid,
+        name: userData.name,
+        email: userData.email,
+        role: 'user',
+        createdAt: new Date().toISOString(),
+        isEmailVerified: false // Will be updated when they verify
+      };
+
+      await setDoc(doc(db, 'users', user.uid), newUser);
+
+      // 4. Send verification email
+      // Use Firebase's native verification
+      await sendEmailVerification(user);
+
+      return {
+        data: {
+          user: newUser,
+          message: 'Registration successful! Please check your email to verify your account.'
         }
-      }, 1000);
-    });
+      };
+    } catch (error) {
+      console.error("Registration Error:", error);
+      throw new Error(error.message);
+    }
   },
 
   // Login user
   login: async (email, password) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const user = users.find(u => u.email === email && u.password === password);
-        
-        if (!user) {
-          reject(new Error('Invalid email or password'));
-          return;
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Get user profile from Firestore
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      let userData = userDoc.exists() ? userDoc.data() : null;
+
+      if (!userData) {
+        // Fallback if firestore doc missing
+        userData = {
+          id: user.uid,
+          name: user.displayName,
+          email: user.email,
+          role: 'user'
+        };
+      }
+
+      const token = await user.getIdToken();
+      const refreshToken = user.refreshToken; 
+
+      return {
+        data: {
+          user: userData,
+          accessToken: token,
+          refreshToken: refreshToken,
         }
-        
-        if (!user.isEmailVerified) {
-          reject(new Error('Please verify your email before logging in'));
-          return;
+      };
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  },
+
+  // Google Login
+  loginWithGoogle: async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      // Check if user exists in Firestore
+      const userRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
+
+      let userData;
+
+      if (!userDoc.exists()) {
+        // Create new user doc
+        userData = {
+          id: user.uid,
+          name: user.displayName,
+          email: user.email,
+          role: 'user',
+          createdAt: new Date().toISOString(),
+          isEmailVerified: user.emailVerified
+        };
+        await setDoc(userRef, userData);
+      } else {
+        userData = userDoc.data();
+      }
+
+      const token = await user.getIdToken();
+
+      return {
+        data: {
+          user: userData,
+          accessToken: token,
         }
-        
-        // Generate mock JWT tokens
-        const accessToken = `mock.jwt.token.${Date.now()}`;
-        const refreshToken = `mock.refresh.token.${Date.now()}`;
-        
-        resolve({
-          data: {
-            user: { ...user, password: undefined },
-            accessToken,
-            refreshToken,
-            expiresIn: 3600 // 1 hour
-          }
-        });
-      }, 1000);
-    });
+      };
+    } catch (error) {
+      throw new Error(error.message);
+    }
   },
 
   // Logout user
   logout: async () => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        tokenManager.clearAll();
-        resolve({ data: { message: 'Logged out successfully' } });
-      }, 500);
-    });
+    try {
+      await signOut(auth);
+      tokenManager.clearAll();
+      return { data: { message: 'Logged out successfully' } };
+    } catch (error) {
+      console.error("Logout Error:", error);
+      throw error;
+    }
   },
 
-  // (removed duplicate verifyEmail and requestPasswordReset)
+  // Request password reset
+  requestPasswordReset: async (email) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      return {
+        data: { message: 'Password reset email sent! Please check your inbox.' }
+      };
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  },
 
   // Resend verification email
-  resendVerification: async (email) => {
-    return new Promise(async (resolve, reject) => {
-      setTimeout(async () => {
-        try {
-          const users = JSON.parse(localStorage.getItem('users') || '[]');
-          const userIndex = users.findIndex(u => u.email === email);
-          
-          if (userIndex === -1) {
-            reject(new Error('Email not found'));
-            return;
-          }
-          
-          if (users[userIndex].isEmailVerified) {
-            reject(new Error('Email already verified'));
-            return;
-          }
-          
-          let token = users[userIndex].verificationToken;
-          const expired = !users[userIndex].verificationTokenExpiry || users[userIndex].verificationTokenExpiry <= Date.now();
-          if (!token || expired) {
-            token = `verify_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            users[userIndex].verificationToken = token;
-            users[userIndex].verificationTokenExpiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
-            localStorage.setItem('users', JSON.stringify(users));
-          }
-          
-          await emailService.sendVerificationEmail(
-            users[userIndex].email,
-            token,
-            users[userIndex].name
-          );
-          
-          resolve({
-            data: { message: 'Verification email resent! Please check your inbox.' }
-          });
-        } catch (error) {
-          reject(error);
-        }
-      }, 800);
-    });
-  },
- 
-  // Reset password
-  resetPassword: async (token, newPassword) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const userIndex = users.findIndex(u => 
-          u.resetToken === token && 
-          u.resetTokenExpiry && u.resetTokenExpiry > Date.now()
-        );
-        
-        if (userIndex === -1) {
-          reject(new Error('Invalid reset token'));
-          return;
-        }
-        
-        users[userIndex].password = newPassword;
-        users[userIndex].resetToken = null;
-        users[userIndex].resetTokenExpiry = null;
-        localStorage.setItem('users', JSON.stringify(users));
-        
-        resolve({
-          data: { message: 'Password reset successfully' }
-        });
-      }, 1000);
-    });
+  resendVerification: async () => {
+    try {
+      if (auth.currentUser) {
+        await sendEmailVerification(auth.currentUser);
+        return {
+          data: { message: 'Verification email resent! Please check your inbox.' }
+        };
+      }
+      throw new Error('No user logged in');
+    } catch (error) {
+      throw new Error(error.message);
+    }
   },
 
-  // Get current user
+  // Get current user (One-off check)
   getCurrentUser: async () => {
     return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const token = tokenManager.getToken();
-        if (!token) {
-          reject(new Error('No token found'));
-          return;
-        }
-        
-        // In real app, decode JWT and fetch user data
-        const userData = localStorage.getItem(USER_KEY);
-        if (userData) {
-          resolve({ data: { user: JSON.parse(userData) } });
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        unsubscribe();
+        if (user) {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (userDoc.exists()) {
+              resolve({ data: { user: userDoc.data() } });
+            } else {
+              // Basic info if doc doesn't exist
+              resolve({ 
+                data: { 
+                  user: {
+                    id: user.uid,
+                    email: user.email,
+                    name: user.displayName,
+                    role: 'user'
+                  } 
+                } 
+              });
+            }
+          } catch (error) {
+            reject(error);
+          }
         } else {
-          reject(new Error('User data not found'));
+          reject(new Error('No user logged in'));
         }
-      }, 500);
-    });
-  }
-};
-
-// Helper function for token refresh
-const refreshAuthToken = async (refreshToken) => {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      // Simulate token refresh
-      const newAccessToken = `mock.jwt.token.${Date.now()}`;
-      resolve({
-        data: { accessToken: newAccessToken }
       });
-    }, 500);
-  });
+    });
+  },
+
+  // Subscribe to auth state changes
+  onAuthStateChanged: (callback) => {
+    return onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+             callback(userDoc.data());
+          } else {
+             callback({
+                id: user.uid,
+                email: user.email,
+                name: user.displayName,
+                role: 'user'
+             });
+          }
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+          callback(null);
+        }
+      } else {
+        callback(null);
+      }
+    });
+  },
+  
+  // Deprecated/Not needed with Firebase Auth (handled by Firebase links)
+  verifyEmail: async (token) => {
+    console.warn("verifyEmail called but Firebase handles this via link");
+    return { data: { message: 'Please check your email to verify.' } };
+  },
+  
+  resetPassword: async (token, newPassword) => {
+     console.warn("resetPassword called but Firebase handles this via link");
+     return { data: { message: 'Please follow the link in your email to reset password.' } };
+  }
 };

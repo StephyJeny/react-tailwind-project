@@ -27,6 +27,7 @@ const AuthForm = () => {
   const navigate = useNavigate();
   const { 
     login, 
+    loginWithGoogle,
     register, 
     requestPasswordReset, 
     resetPassword, 

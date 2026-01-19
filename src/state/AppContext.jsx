@@ -34,28 +34,21 @@ export function AppProvider({ children }) {
 
   // Initialize authentication state
   useEffect(() => {
-    const initAuth = async () => {
-      const token = tokenManager.getToken();
-      
-      if (token && isTokenValid(token)) {
-        try {
-          const response = await authService.getCurrentUser();
-          setUser(response.data.user);
-          setIsAuthenticated(true);
-          startSessionTimer(handleSessionTimeout);
-        } catch (error) {
-          console.error('Failed to get current user:', error);
-          tokenManager.clearAll();
-        }
+    const unsubscribe = authService.onAuthStateChanged((userData) => {
+      if (userData) {
+        setUser(userData);
+        setIsAuthenticated(true);
+        startSessionTimer(handleSessionTimeout);
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+        tokenManager.clearAll();
+        clearSessionTimer();
       }
-      
       setIsLoading(false);
-    };
+    });
 
-    initAuth();
-
-    // Cleanup session timer on unmount
-    return () => clearSessionTimer();
+    return () => unsubscribe();
   }, [handleSessionTimeout]);
 
   // Reset session timer on user activity
@@ -525,6 +518,7 @@ export function AppProvider({ children }) {
     
     // Auth functions
     login,
+    loginWithGoogle,
     register,
     logout,
     verifyEmail,
