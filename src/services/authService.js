@@ -70,7 +70,7 @@ export const authService = {
         id: user.uid,
         name: userData.name,
         email: userData.email,
-        role: 'user',
+        role: userData.role || 'user',
         createdAt: new Date().toISOString(),
         isEmailVerified: false // Will be updated when they verify
       };
