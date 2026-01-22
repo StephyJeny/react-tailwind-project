@@ -14,7 +14,22 @@ import { db } from '../services/firebase';
 
 export default function Admin() {
   const { user, t } = useApp();
-  const firebaseConfigured = !!import.meta.env.VITE_FIREBASE_PROJECT_ID;
+  
+  // Check for all required Firebase environment variables
+  const requiredEnvVars = useMemo(() => [
+    'VITE_FIREBASE_API_KEY',
+    'VITE_FIREBASE_AUTH_DOMAIN',
+    'VITE_FIREBASE_PROJECT_ID',
+    'VITE_FIREBASE_STORAGE_BUCKET',
+    'VITE_FIREBASE_MESSAGING_SENDER_ID',
+    'VITE_FIREBASE_APP_ID'
+  ], []);
+
+  const missingEnvVars = useMemo(() => {
+    return requiredEnvVars.filter(key => !import.meta.env[key]);
+  }, [requiredEnvVars]);
+
+  const firebaseConfigured = missingEnvVars.length === 0;
   const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,8 +66,9 @@ export default function Admin() {
         },
         async (err) => {
           console.error('Failed to load users:', err);
+          const errorCode = err.code ? `[${err.code}] ` : '';
           setLastError({ code: err?.code, message: err?.message });
-          toast.error(`Failed to load users: ${err.code || err.message || 'unknown error'}`);
+          toast.error(`Failed to load users: ${errorCode}${err.message || 'unknown error'}`);
           try {
             const snap2 = await getDocs(collection(db, 'users'));
             const list2 = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -64,9 +80,10 @@ export default function Admin() {
       return () => unsubscribe();
     } catch (err) {
       console.error('Failed to load users:', err);
+      const errorCode = err.code ? `[${err.code}] ` : '';
       setLastError({ code: err?.code, message: err?.message });
       setLoading(false);
-      toast.error(`Failed to load users: ${err.code || err.message || 'unknown error'}`);
+      toast.error(`Failed to load users: ${errorCode}${err.message || 'unknown error'}`);
     }
   }, [firebaseConfigured]);
 
@@ -140,7 +157,8 @@ export default function Admin() {
       setEditingId(null);
     } catch (error) {
       console.error('Update failed:', error);
-      toast.error('Update failed');
+      const errorCode = error.code ? `[${error.code}] ` : '';
+      toast.error(`Update failed: ${errorCode}${error.message || 'Unknown error'}`);
     }
   };
 
@@ -155,7 +173,8 @@ export default function Admin() {
       toast.success('User deleted');
     } catch (error) {
       console.error('Delete failed:', error);
-      toast.error('Delete failed');
+      const errorCode = error.code ? `[${error.code}] ` : '';
+      toast.error(`Delete failed: ${errorCode}${error.message || 'Unknown error'}`);
     }
   };
 
@@ -208,10 +227,18 @@ export default function Admin() {
               {t('user_management')}
             </h2>
             {!firebaseConfigured && (
-              <div className="rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 p-4 mb-4">
-                <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                  Firebase is not configured. Set VITE_FIREBASE_* environment variables to enable user management.
+              <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4 mb-4">
+                <h3 className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">
+                  Firebase Configuration Missing
+                </h3>
+                <p className="text-sm text-red-700 dark:text-red-300 mb-2">
+                  The following environment variables are missing. Please add them to your .env file:
                 </p>
+                <ul className="list-disc list-inside text-sm text-red-600 dark:text-red-400 font-mono">
+                  {missingEnvVars.map(key => (
+                    <li key={key}>{key}</li>
+                  ))}
+                </ul>
               </div>
             )}
             <div className="mb-4">

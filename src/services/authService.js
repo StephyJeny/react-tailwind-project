@@ -89,7 +89,7 @@ export const authService = {
       };
     } catch (error) {
       console.error("Registration Error:", error);
-      throw new Error(error.message);
+      throw error;
     }
   },
 
@@ -124,7 +124,8 @@ export const authService = {
         }
       };
     } catch (error) {
-      throw new Error(error.message);
+      console.error("Login Error:", error);
+      throw error;
     }
   },
 
@@ -164,7 +165,8 @@ export const authService = {
         }
       };
     } catch (error) {
-      throw new Error(error.message);
+      console.error("Google Login Error:", error);
+      throw error;
     }
   },
 
@@ -188,7 +190,8 @@ export const authService = {
         data: { message: 'Password reset email sent! Please check your inbox.' }
       };
     } catch (error) {
-      throw new Error(error.message);
+      console.error("Password Reset Error:", error);
+      throw error;
     }
   },
 
@@ -203,7 +206,8 @@ export const authService = {
       }
       throw new Error('No user logged in');
     } catch (error) {
-      throw new Error(error.message);
+      console.error("Resend Verification Error:", error);
+      throw error;
     }
   },
 

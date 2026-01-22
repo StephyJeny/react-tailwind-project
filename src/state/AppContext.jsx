@@ -172,8 +172,9 @@ export function AppProvider({ children }) {
       
       return { success: true };
     } catch (error) {
-      setAuthError(error.message);
-      return { success: false, error: error.message };
+      const msg = error.code ? `[${error.code}] ${error.message}` : error.message;
+      setAuthError(msg);
+      return { success: false, error: msg };
     } finally {
       setIsLoading(false);
     }
@@ -196,8 +197,9 @@ export function AppProvider({ children }) {
       
       return { success: true };
     } catch (error) {
-      setAuthError(error.message);
-      return { success: false, error: error.message };
+      const msg = error.code ? `[${error.code}] ${error.message}` : error.message;
+      setAuthError(msg);
+      return { success: false, error: msg };
     } finally {
       setIsLoading(false);
     }
@@ -211,8 +213,9 @@ export function AppProvider({ children }) {
       const response = await authService.register(userData);
       return { success: true, message: response.data.message };
     } catch (error) {
-      setAuthError(error.message);
-      return { success: false, error: error.message };
+      const msg = error.code ? `[${error.code}] ${error.message}` : error.message;
+      setAuthError(msg);
+      return { success: false, error: msg };
     } finally {
       setIsLoading(false);
     }
@@ -238,7 +241,8 @@ export function AppProvider({ children }) {
       const response = await authService.verifyEmail(token);
       return { success: true, message: response.data.message };
     } catch (error) {
-      return { success: false, error: error.message };
+      const msg = error.code ? `[${error.code}] ${error.message}` : error.message;
+      return { success: false, error: msg };
     } finally {
       setIsLoading(false);
     }
@@ -250,7 +254,8 @@ export function AppProvider({ children }) {
       const response = await authService.requestPasswordReset(email);
       return { success: true, message: response.data.message };
     } catch (error) {
-      return { success: false, error: error.message };
+      const msg = error.code ? `[${error.code}] ${error.message}` : error.message;
+      return { success: false, error: msg };
     } finally {
       setIsLoading(false);
     }
@@ -262,7 +267,8 @@ export function AppProvider({ children }) {
       const response = await authService.resendVerification(email);
       return { success: true, message: response.data.message };
     } catch (error) {
-      return { success: false, error: error.message };
+      const msg = error.code ? `[${error.code}] ${error.message}` : error.message;
+      return { success: false, error: msg };
     } finally {
       setIsLoading(false);
     }
@@ -274,7 +280,8 @@ export function AppProvider({ children }) {
       const response = await authService.resetPassword(token, newPassword);
       return { success: true, message: response.data.message };
     } catch (error) {
-      return { success: false, error: error.message };
+      const msg = error.code ? `[${error.code}] ${error.message}` : error.message;
+      return { success: false, error: msg };
     } finally {
       setIsLoading(false);
     }
@@ -288,8 +295,9 @@ export function AppProvider({ children }) {
       const response = await authService.changePassword(currentPassword, newPassword);
       return { success: true, message: response.data.message };
     } catch (error) {
-      setAuthError(error.message);
-      return { success: false, error: error.message };
+      const msg = error.code ? `[${error.code}] ${error.message}` : error.message;
+      setAuthError(msg);
+      return { success: false, error: msg };
     } finally {
       setIsLoading(false);
     }
