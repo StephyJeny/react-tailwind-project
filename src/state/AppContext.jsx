@@ -16,7 +16,7 @@ const storage = {
   set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
 
-export function AppProvider({ children }) {
+export function AppProvider({ children, initialUser = null, initialAuthenticated = false }) {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,6 +37,13 @@ export function AppProvider({ children }) {
 
   // Initialize authentication state
   useEffect(() => {
+    if (initialUser) {
+      setUser(initialUser);
+      setIsAuthenticated(initialAuthenticated ?? true);
+      startSessionTimer(handleSessionTimeout);
+      setIsLoading(false);
+      return;
+    }
     const token = tokenManager.getToken && tokenManager.getToken();
     const storedUser = storage.get("user_data", null);
     if (!isAuthenticated && token && isTokenValid(token) && storedUser) {
@@ -69,7 +76,7 @@ export function AppProvider({ children }) {
     });
 
     return () => unsubscribe();
-  }, [handleSessionTimeout]);
+  }, [handleSessionTimeout, initialUser, initialAuthenticated, isAuthenticated]);
 
   // Reset session timer on user activity
   useEffect(() => {

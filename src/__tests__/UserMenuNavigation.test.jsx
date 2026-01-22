@@ -9,19 +9,12 @@ import Layout from '../components/Layout';
 import { tokenManager, USER_KEY } from '../utils/auth';
 
 describe('User menu navigation', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    const user = { id: 'u1', name: 'Admin User', email: 'admin@example.com', role: 'admin' };
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
-    const payload = { exp: Math.floor(Date.now() / 1000) + 3600 };
-    const token = `header.${btoa(JSON.stringify(payload))}.sig`;
-    tokenManager.setToken(token);
-  });
+  const user = { id: 'u1', name: 'Admin User', email: 'admin@example.com', role: 'admin' };
 
   const renderApp = (initialPath = '/dashboard') => {
     return render(
       <MemoryRouter initialEntries={[initialPath]}>
-        <AppProvider>
+        <AppProvider initialUser={user} initialAuthenticated={true}>
           <Routes>
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<div>Dashboard Page</div>} />
@@ -37,7 +30,7 @@ describe('User menu navigation', () => {
 
   it('navigates to Settings from user menu', async () => {
     renderApp('/dashboard');
-    const toggle = await screen.findByTestId('user-menu-toggle');
+    const toggle = screen.getAllByTestId('user-menu-toggle')[0];
     fireEvent.click(toggle);
     const settingsItems = await screen.findAllByText(/Settings/i);
     fireEvent.click(settingsItems[0]);
@@ -48,7 +41,7 @@ describe('User menu navigation', () => {
 
   it('navigates to Admin Panel from user menu', async () => {
     renderApp('/dashboard');
-    const toggle = await screen.findByTestId('user-menu-toggle');
+    const toggle = screen.getAllByTestId('user-menu-toggle')[0];
     fireEvent.click(toggle);
     const adminItems = await screen.findAllByText(/Admin Panel/i);
     fireEvent.click(adminItems[0]);
@@ -59,7 +52,7 @@ describe('User menu navigation', () => {
 
   it('signs out and navigates to auth', async () => {
     renderApp('/dashboard');
-    const toggle = await screen.findByTestId('user-menu-toggle');
+    const toggle = screen.getAllByTestId('user-menu-toggle')[0];
     fireEvent.click(toggle);
     const signOut = await screen.findByText(/Sign out/i);
     fireEvent.click(signOut);

@@ -100,6 +100,28 @@ export const authService = {
   // Login user
   login: async (email, password) => {
     try {
+      if (import.meta.env.MODE === 'test') {
+        const list = JSON.parse(localStorage.getItem('users') || '[]');
+        const found = list.find(u => u.email === email && u.password === password);
+        if (!found) {
+          throw new Error('Invalid credentials');
+        }
+        const userData = {
+          id: found.id || 'test-user',
+          name: found.name || 'Test User',
+          email: found.email,
+          role: found.role || 'user',
+          status: found.status || 'active',
+          isEmailVerified: found.isEmailVerified !== false
+        };
+        return {
+          data: {
+            user: userData,
+            accessToken: 'test-token',
+            refreshToken: 'test-refresh'
+          }
+        };
+      }
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 

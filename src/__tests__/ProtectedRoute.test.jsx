@@ -14,7 +14,7 @@ describe('ProtectedRoute', () => {
           <Route
             path="/"
             element={
-              <AppProvider>
+              <AppProvider initialUser={null} initialAuthenticated={false}>
                 <ProtectedRoute>
                   <div>Protected</div>
                 </ProtectedRoute>
