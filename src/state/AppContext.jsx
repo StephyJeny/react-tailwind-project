@@ -24,7 +24,7 @@ export function AppProvider({ children }) {
   const [systemReducedMotion, setSystemReducedMotion] = useState(false);
   const [reducedMotionOverride, setReducedMotionOverride] = useState(storage.get("pf_reduce_motion", "auto")); // 'auto' | 'on' | 'off'
   const [transactions, setTransactions] = useState(storage.get("pf_tx", []));
-  const [cart, setCart] = useState(storage.get("pf_cart", []));
+  const [cart, setCart] = useState(storage.get("pf_cart_guest", []));
 
   // Session timeout handler
   const handleSessionTimeout = useCallback(() => {
@@ -34,16 +34,33 @@ export function AppProvider({ children }) {
 
   // Initialize authentication state
   useEffect(() => {
+    const token = tokenManager.getToken && tokenManager.getToken();
+    const storedUser = storage.get("user_data", null);
+    if (!isAuthenticated && token && isTokenValid(token) && storedUser) {
+      setUser(storedUser);
+      setIsAuthenticated(true);
+      startSessionTimer(handleSessionTimeout);
+      setIsLoading(false);
+    }
+
     const unsubscribe = authService.onAuthStateChanged((userData) => {
       if (userData) {
         setUser(userData);
         setIsAuthenticated(true);
         startSessionTimer(handleSessionTimeout);
       } else {
-        setUser(null);
-        setIsAuthenticated(false);
-        tokenManager.clearAll();
-        clearSessionTimer();
+        const token2 = tokenManager.getToken && tokenManager.getToken();
+        const storedUser2 = storage.get("user_data", null);
+        if (token2 && isTokenValid(token2) && storedUser2) {
+          setUser(storedUser2);
+          setIsAuthenticated(true);
+          startSessionTimer(handleSessionTimeout);
+        } else {
+          setUser(null);
+          setIsAuthenticated(false);
+          tokenManager.clearAll();
+          clearSessionTimer();
+        }
       }
       setIsLoading(false);
     });
@@ -104,7 +121,21 @@ export function AppProvider({ children }) {
 
   // Data persistence
   useEffect(() => storage.set("pf_tx", transactions), [transactions]);
-  useEffect(() => storage.set("pf_cart", cart), [cart]);
+  useEffect(() => {
+    const key = user?.id ? `pf_cart_${user.id}` : "pf_cart_guest";
+    storage.set(key, cart);
+  }, [cart, user]);
+
+  // Load cart per user
+  useEffect(() => {
+    if (user?.id) {
+      const userCart = storage.get(`pf_cart_${user.id}`, []);
+      setCart(userCart);
+    } else {
+      const guestCart = storage.get("pf_cart_guest", []);
+      setCart(guestCart);
+    }
+  }, [user]);
 
   // Authentication functions
   const login = async (email, password) => {

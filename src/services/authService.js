@@ -71,6 +71,7 @@ export const authService = {
         name: userData.name,
         email: userData.email,
         role: userData.role || 'user',
+        status: 'active',
         createdAt: new Date().toISOString(),
         isEmailVerified: false // Will be updated when they verify
       };
@@ -109,7 +110,8 @@ export const authService = {
           id: user.uid,
           name: user.displayName,
           email: user.email,
-          role: 'user'
+          role: 'user',
+          status: 'active'
         };
       }
 
@@ -225,7 +227,8 @@ export const authService = {
                     id: user.uid,
                     email: user.email,
                     name: user.displayName,
-                    role: 'user'
+                   role: 'user',
+                   status: 'active'
                   } 
                 } 
               });

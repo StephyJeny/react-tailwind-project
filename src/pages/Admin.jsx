@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   UsersIcon, 
   ShieldCheckIcon, 
@@ -7,17 +7,69 @@ import {
 } from '@heroicons/react/24/outline';
 
 import { useApp } from '../state/AppContext';
+import { db } from '../services/firebase';
+import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { toast } from 'sonner';
 
 export default function Admin() {
   const { user, t } = useApp();
   const [activeTab, setActiveTab] = useState('users');
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ role: 'user', status: 'active' });
 
-  // Mock admin data
-  const [users] = useState([
-    { id: 1, name: 'John Doe', email: 'john@example.com', role: 'user', status: 'active' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'admin', status: 'active' },
-    { id: 3, name: 'Bob Johnson', email: 'bob@example.com', role: 'user', status: 'inactive' },
-  ]);
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        const snap = await getDocs(collection(db, 'users'));
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setUsers(list);
+      } catch (error) {
+        console.error('Failed to load users:', error);
+        toast.error('Failed to load users');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  const startEdit = (u) => {
+    setEditingId(u.id);
+    setEditForm({ role: u.role || 'user', status: u.status || 'active' });
+  };
+
+  const saveEdit = async () => {
+    try {
+      const ref = doc(db, 'users', editingId);
+      await updateDoc(ref, { role: editForm.role, status: editForm.status });
+      setUsers(prev => prev.map(u => u.id === editingId ? { ...u, role: editForm.role, status: editForm.status } : u));
+      toast.success('User updated');
+      setEditingId(null);
+    } catch (error) {
+      console.error('Update failed:', error);
+      toast.error('Update failed');
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+  };
+
+  const deleteUser = async (id) => {
+    const confirmed = window.confirm('Delete this user?');
+    if (!confirmed) return;
+    try {
+      await deleteDoc(doc(db, 'users', id));
+      setUsers(prev => prev.filter(u => u.id !== id));
+      toast.success('User deleted');
+    } catch (error) {
+      console.error('Delete failed:', error);
+      toast.error('Delete failed');
+    }
+  };
 
   const tabs = [
     { id: 'users', name: t('admin_tab_users'), icon: UsersIcon },
@@ -86,43 +138,96 @@ export default function Admin() {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {users.map((user) => (
-                    <tr key={user.id}>
+                  {loading && (
+                    <tr><td className="px-6 py-4" colSpan={4}>Loading...</td></tr>
+                  )}
+                  {!loading && users.length === 0 && (
+                    <tr><td className="px-6 py-4" colSpan={4}>No users found.</td></tr>
+                  )}
+                  {!loading && users.map((u) => (
+                    <tr key={u.id}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {user.name}
+                            {u.name}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {user.email}
+                            {u.email}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          user.role === 'admin'
-                            ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                        }`}>
-                          {user.role}
-                        </span>
+                        {editingId === u.id ? (
+                          <select
+                            value={editForm.role}
+                            onChange={(e) => setEditForm(f => ({ ...f, role: e.target.value }))}
+                            className="border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-800 text-sm"
+                          >
+                            <option value="user">user</option>
+                            <option value="admin">admin</option>
+                          </select>
+                        ) : (
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            u.role === 'admin'
+                              ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+                              : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                          }`}>
+                            {u.role}
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          user.status === 'active'
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                        }`}>
-                          {user.status}
-                        </span>
+                        {editingId === u.id ? (
+                          <select
+                            value={editForm.status}
+                            onChange={(e) => setEditForm(f => ({ ...f, status: e.target.value }))}
+                            className="border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-800 text-sm"
+                          >
+                            <option value="active">active</option>
+                            <option value="inactive">inactive</option>
+                          </select>
+                        ) : (
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            (u.status || 'active') === 'active'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          }`}>
+                            {u.status || 'active'}
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-3">
-                          {t('edit')}
-                        </button>
-                        <button className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
-                          {t('delete')}
-                        </button>
+                        {editingId === u.id ? (
+                          <>
+                            <button
+                              onClick={saveEdit}
+                              className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 mr-3"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={cancelEdit}
+                              className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => startEdit(u)}
+                              className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-3"
+                            >
+                              {t('edit')}
+                            </button>
+                            <button
+                              onClick={() => deleteUser(u.id)}
+                              className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                            >
+                              {t('delete')}
+                            </button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   ))}
