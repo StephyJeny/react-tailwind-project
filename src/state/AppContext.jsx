@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
-import { doc, onSnapshot, setDoc } from "firebase/firestore";
 
 import { authService } from "../services/authService";
 import { db } from "../services/firebase";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { tokenManager, isTokenValid, startSessionTimer, clearSessionTimer, resetSessionTimer } from "../utils/auth";
 
 const AppContext = createContext(null);
@@ -16,7 +16,7 @@ const storage = {
   set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
 
-export function AppProvider({ children, initialUser = null, initialAuthenticated = false }) {
+export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,13 +37,6 @@ export function AppProvider({ children, initialUser = null, initialAuthenticated
 
   // Initialize authentication state
   useEffect(() => {
-    if (initialUser) {
-      setUser(initialUser);
-      setIsAuthenticated(initialAuthenticated ?? true);
-      startSessionTimer(handleSessionTimeout);
-      setIsLoading(false);
-      return;
-    }
     const token = tokenManager.getToken && tokenManager.getToken();
     const storedUser = storage.get("user_data", null);
     if (!isAuthenticated && token && isTokenValid(token) && storedUser) {
@@ -76,7 +69,7 @@ export function AppProvider({ children, initialUser = null, initialAuthenticated
     });
 
     return () => unsubscribe();
-  }, [handleSessionTimeout, initialUser, initialAuthenticated, isAuthenticated]);
+  }, [handleSessionTimeout]);
 
   // Reset session timer on user activity
   useEffect(() => {

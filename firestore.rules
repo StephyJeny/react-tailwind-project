@@ -1,9 +1,17 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow users to read and write only their own document
+    function isAuthenticated() { return request.auth != null; }
+    function isAdmin() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    match /settings/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
   }
 }

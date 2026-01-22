@@ -14,6 +14,7 @@ import { db } from '../services/firebase';
 
 export default function Admin() {
   const { user, t } = useApp();
+  const firebaseConfigured = !!import.meta.env.VITE_FIREBASE_PROJECT_ID;
   const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,9 +32,15 @@ export default function Admin() {
   const [visibleCount, setVisibleCount] = useState(12);
   const [pageSize, setPageSize] = useState('all');
   const [page, setPage] = useState(1);
+  const [diagOpen, setDiagOpen] = useState(false);
+  const [lastError, setLastError] = useState(null);
 
   useEffect(() => {
     setLoading(true);
+    if (!firebaseConfigured) {
+      setLoading(false);
+      return;
+    }
     try {
       const unsubscribe = onSnapshot(
         collection(db, 'users'),
@@ -42,17 +49,27 @@ export default function Admin() {
           setUsers(list);
           setLoading(false);
         },
-        () => {
-          toast.error('Failed to load users');
+        async (err) => {
+          console.error('Failed to load users:', err);
+          setLastError({ code: err?.code, message: err?.message });
+          toast.error(`Failed to load users: ${err.code || err.message || 'unknown error'}`);
+          try {
+            const snap2 = await getDocs(collection(db, 'users'));
+            const list2 = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
+            setUsers(list2);
+          } catch {}
           setLoading(false);
         }
       );
       return () => unsubscribe();
-    } catch {
+    } catch (err) {
+      console.error('Failed to load users:', err);
+      setLastError({ code: err?.code, message: err?.message });
       setLoading(false);
-      toast.error('Failed to load users');
+      toast.error(`Failed to load users: ${err.code || err.message || 'unknown error'}`);
     }
-  }, []);
+  }, [firebaseConfigured]);
+
 
   useEffect(() => {
     const el = listRef.current;
@@ -190,6 +207,73 @@ export default function Admin() {
             <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
               {t('user_management')}
             </h2>
+            {!firebaseConfigured && (
+              <div className="rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 p-4 mb-4">
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  Firebase is not configured. Set VITE_FIREBASE_* environment variables to enable user management.
+                </p>
+              </div>
+            )}
+            <div className="mb-4">
+              <button
+                onClick={() => setDiagOpen(v => !v)}
+                className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                {diagOpen ? 'Hide Diagnostics' : 'Show Diagnostics'}
+              </button>
+            </div>
+            {diagOpen && (
+              <div className="grid md:grid-cols-2 gap-4 mb-6">
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
+                  <h3 className="font-medium text-gray-900 dark:text-white mb-2">Environment</h3>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span>Configured</span>
+                      <span className={`font-semibold ${firebaseConfigured ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {firebaseConfigured ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Project ID</span>
+                      <span className="font-mono">{import.meta.env.VITE_FIREBASE_PROJECT_ID || '(missing)'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Auth Domain</span>
+                      <span className="font-mono">{import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '(missing)'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>API Key</span>
+                      <span className="font-mono">{import.meta.env.VITE_FIREBASE_API_KEY ? 'present' : '(missing)'}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
+                  <h3 className="font-medium text-gray-900 dark:text-white mb-2">Connectivity</h3>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span>Authenticated</span>
+                      <span className={`font-semibold ${user ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {user ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>User ID</span>
+                      <span className="font-mono">{user?.id || '(none)'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Role</span>
+                      <span className="font-mono">{user?.role || '(none)'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Users Listener</span>
+                      <span className={`font-semibold ${lastError ? 'text-red-600 dark:text-red-400' : (loading ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400')}`}>
+                        {lastError ? (lastError.code || lastError.message || 'Error') : (loading ? 'Loading…' : `OK (${users.length})`)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="flex items-center justify-between mb-4 gap-3">
               <input
                 value={search}

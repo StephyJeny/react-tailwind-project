@@ -10,10 +10,14 @@ import { tokenManager, USER_KEY } from '../utils/auth';
 describe('Admin role access control', () => {
   it('denies access for non-admin users', async () => {
     const user = { id: 'u2', name: 'Normal User', email: 'user@example.com', role: 'user' };
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    const payload = { exp: Math.floor(Date.now() / 1000) + 3600 };
+    const token = `header.${btoa(JSON.stringify(payload))}.sig`;
+    tokenManager.setToken(token);
 
     render(
       <MemoryRouter initialEntries={['/admin']}>
-        <AppProvider initialUser={user} initialAuthenticated={true}>
+        <AppProvider>
           <Routes>
             <Route
               path="/admin"

@@ -7,10 +7,7 @@ import {
   sendEmailVerification,
   signInWithPopup,
   updateProfile,
-  onAuthStateChanged,
-  updatePassword,
-  EmailAuthProvider,
-  reauthenticateWithCredential
+  onAuthStateChanged
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
@@ -73,8 +70,7 @@ export const authService = {
         id: user.uid,
         name: userData.name,
         email: userData.email,
-        role: userData.role || 'user',
-        status: 'active',
+        role: 'user',
         createdAt: new Date().toISOString(),
         isEmailVerified: false // Will be updated when they verify
       };
@@ -100,28 +96,6 @@ export const authService = {
   // Login user
   login: async (email, password) => {
     try {
-      if (import.meta.env.MODE === 'test') {
-        const list = JSON.parse(localStorage.getItem('users') || '[]');
-        const found = list.find(u => u.email === email && u.password === password);
-        if (!found) {
-          throw new Error('Invalid credentials');
-        }
-        const userData = {
-          id: found.id || 'test-user',
-          name: found.name || 'Test User',
-          email: found.email,
-          role: found.role || 'user',
-          status: found.status || 'active',
-          isEmailVerified: found.isEmailVerified !== false
-        };
-        return {
-          data: {
-            user: userData,
-            accessToken: 'test-token',
-            refreshToken: 'test-refresh'
-          }
-        };
-      }
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
@@ -135,8 +109,7 @@ export const authService = {
           id: user.uid,
           name: user.displayName,
           email: user.email,
-          role: 'user',
-          status: 'active'
+          role: 'user'
         };
       }
 
@@ -233,21 +206,6 @@ export const authService = {
       throw new Error(error.message);
     }
   },
-  
-  // Change password with re-authentication
-  changePassword: async (currentPassword, newPassword) => {
-    try {
-      if (!auth.currentUser) throw new Error('No user logged in');
-      const user = auth.currentUser;
-      const email = user.email;
-      const credential = EmailAuthProvider.credential(email, currentPassword);
-      await reauthenticateWithCredential(user, credential);
-      await updatePassword(user, newPassword);
-      return { data: { message: 'Password updated successfully' } };
-    } catch (error) {
-      throw new Error(error.message);
-    }
-  },
 
   // Get current user (One-off check)
   getCurrentUser: async () => {
@@ -267,8 +225,7 @@ export const authService = {
                     id: user.uid,
                     email: user.email,
                     name: user.displayName,
-                   role: 'user',
-                   status: 'active'
+                    role: 'user'
                   } 
                 } 
               });
