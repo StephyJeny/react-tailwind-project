@@ -10,11 +10,11 @@ import {
 } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import { useApp } from "../state/AppContext";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 import LanguageSelector from "../components/LanguageSelector";
 
 export default function Settings() {

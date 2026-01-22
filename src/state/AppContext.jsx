@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 
 import { authService } from "../services/authService";
 import { db } from "../services/firebase";
-import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { tokenManager, isTokenValid, startSessionTimer, clearSessionTimer, resetSessionTimer } from "../utils/auth";
 
 const AppContext = createContext(null);

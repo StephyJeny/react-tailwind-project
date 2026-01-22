@@ -37,7 +37,7 @@ describe('User menu navigation', () => {
 
   it('navigates to Settings from user menu', async () => {
     renderApp('/dashboard');
-    const toggle = await screen.findByRole('button', { name: /admin user/i });
+    const toggle = await screen.findByTestId('user-menu-toggle');
     fireEvent.click(toggle);
     const settingsItems = await screen.findAllByText(/Settings/i);
     fireEvent.click(settingsItems[0]);
@@ -48,7 +48,7 @@ describe('User menu navigation', () => {
 
   it('navigates to Admin Panel from user menu', async () => {
     renderApp('/dashboard');
-    const toggle = await screen.findByRole('button', { name: /admin user/i });
+    const toggle = await screen.findByTestId('user-menu-toggle');
     fireEvent.click(toggle);
     const adminItems = await screen.findAllByText(/Admin Panel/i);
     fireEvent.click(adminItems[0]);
@@ -59,7 +59,7 @@ describe('User menu navigation', () => {
 
   it('signs out and navigates to auth', async () => {
     renderApp('/dashboard');
-    const toggle = await screen.findByRole('button', { name: /admin user/i });
+    const toggle = await screen.findByTestId('user-menu-toggle');
     fireEvent.click(toggle);
     const signOut = await screen.findByText(/Sign out/i);
     fireEvent.click(signOut);

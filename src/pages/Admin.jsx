@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { 
   UsersIcon, 
   ShieldCheckIcon, 
@@ -6,10 +6,12 @@ import {
   CogIcon 
 } from '@heroicons/react/24/outline';
 
+import { toast } from 'sonner';
+import { collection, getDocs, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+
 import { useApp } from '../state/AppContext';
 import { db } from '../services/firebase';
-import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { toast } from 'sonner';
+
 
 export default function Admin() {
   const { user, t } = useApp();
@@ -20,51 +22,93 @@ export default function Admin() {
   const [editForm, setEditForm] = useState({ role: 'user', status: 'active' });
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [search, setSearch] = useState('');
+  const [filterRole, setFilterRole] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [sortBy, setSortBy] = useState('name');
+  const [sortDir, setSortDir] = useState('asc');
+  const rowHeight = 64;
+  const listRef = useRef(null);
+  const [startIndex, setStartIndex] = useState(0);
+  const [visibleCount, setVisibleCount] = useState(12);
+  const [pageSize, setPageSize] = useState('all');
   const [page, setPage] = useState(1);
-  const pageSize = 10;
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setLoading(true);
-        const snap = await getDocs(collection(db, 'users'));
-        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setUsers(list);
-      } catch (error) {
-        console.error('Failed to load users:', error);
-        toast.error('Failed to load users');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUsers();
+    setLoading(true);
+    try {
+      const unsubscribe = onSnapshot(
+        collection(db, 'users'),
+        (snap) => {
+          const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          setUsers(list);
+          setLoading(false);
+        },
+        () => {
+          toast.error('Failed to load users');
+          setLoading(false);
+        }
+      );
+      return () => unsubscribe();
+    } catch {
+      setLoading(false);
+      toast.error('Failed to load users');
+    }
   }, []);
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const measure = () => {
+      const h = el.clientHeight || 600;
+      const count = Math.max(5, Math.ceil(h / rowHeight) + 2);
+      setVisibleCount(count);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [rowHeight]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const list = term
+    let list = term
       ? users.filter(u => 
           (u.name || '').toLowerCase().includes(term) ||
           (u.email || '').toLowerCase().includes(term) ||
           (u.role || '').toLowerCase().includes(term) ||
           (u.status || '').toLowerCase().includes(term)
         )
-      : users;
-    const start = (page - 1) * pageSize;
-    return list.slice(start, start + pageSize);
-  }, [users, search, page]);
+      : users.slice();
+    if (filterRole !== 'all') list = list.filter(u => (u.role || 'user') === filterRole);
+    if (filterStatus !== 'all') list = list.filter(u => (u.status || 'active') === filterStatus);
+    list.sort((a, b) => {
+      const va = (a[sortBy] || '').toString().toLowerCase();
+      const vb = (b[sortBy] || '').toString().toLowerCase();
+      if (va < vb) return sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return list;
+  }, [users, search, filterRole, filterStatus, sortBy, sortDir]);
+
+  const displayList = useMemo(() => {
+    if (pageSize === 'all') return filtered;
+    const size = Number(pageSize);
+    const start = (page - 1) * size;
+    return filtered.slice(start, start + size);
+  }, [filtered, page, pageSize]);
+
   const totalPages = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    const count = term
-      ? users.filter(u => 
-          (u.name || '').toLowerCase().includes(term) ||
-          (u.email || '').toLowerCase().includes(term) ||
-          (u.role || '').toLowerCase().includes(term) ||
-          (u.status || '').toLowerCase().includes(term)
-        ).length
-      : users.length;
-    return Math.max(1, Math.ceil(count / pageSize));
-  }, [users, search]);
+    if (pageSize === 'all') return 1;
+    const size = Number(pageSize);
+    return Math.max(1, Math.ceil(filtered.length / size));
+  }, [filtered, pageSize]);
+
+  const onScroll = useCallback((e) => {
+    const top = e.currentTarget.scrollTop;
+    const idx = Math.floor(top / rowHeight);
+    setStartIndex(idx);
+  }, []);
 
   const startEdit = (u) => {
     setEditingId(u.id);
@@ -147,32 +191,80 @@ export default function Admin() {
             <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
               {t('user_management')}
             </h2>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 gap-3">
               <input
                 value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                onChange={(e) => { setSearch(e.target.value); }}
                 placeholder="Search users..."
                 className="w-64 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm"
               />
-              <div className="flex items-center gap-2 text-sm">
-                <button
-                  disabled={page <= 1}
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  className="px-3 py-1 rounded border border-gray-300 dark:border-gray-700 disabled:opacity-50"
-                >
-                  Prev
-                </button>
-                <span>Page {page} / {totalPages}</span>
-                <button
-                  disabled={page >= totalPages}
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  className="px-3 py-1 rounded border border-gray-300 dark:border-gray-700 disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </div>
+              <select
+                value={pageSize}
+                onChange={(e) => { setPageSize(e.target.value); setPage(1); }}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm"
+              >
+                <option value="all">Page size: All (virtualized)</option>
+                <option value="10">Page size: 10</option>
+                <option value="25">Page size: 25</option>
+                <option value="50">Page size: 50</option>
+              </select>
+              <select
+                value={filterRole}
+                onChange={(e) => { setFilterRole(e.target.value); }}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm"
+              >
+                <option value="all">All roles</option>
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+              <select
+                value={filterStatus}
+                onChange={(e) => { setFilterStatus(e.target.value); }}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm"
+              >
+                <option value="all">All status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm"
+              >
+                <option value="name">Sort: Name</option>
+                <option value="email">Sort: Email</option>
+                <option value="role">Sort: Role</option>
+                <option value="status">Sort: Status</option>
+              </select>
+              <select
+                value={sortDir}
+                onChange={(e) => setSortDir(e.target.value)}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm"
+              >
+                <option value="asc">Asc</option>
+                <option value="desc">Desc</option>
+              </select>
+              {pageSize !== 'all' && (
+                <div className="flex items-center gap-2 text-sm">
+                  <button
+                    disabled={page <= 1}
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    className="px-3 py-1 rounded border border-gray-300 dark:border-gray-700 disabled:opacity-50"
+                  >
+                    Prev
+                  </button>
+                  <span>Page {page} / {totalPages}</span>
+                  <button
+                    disabled={page >= totalPages}
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    className="px-3 py-1 rounded border border-gray-300 dark:border-gray-700 disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-auto" ref={listRef} onScroll={onScroll} style={{ maxHeight: 600 }}>
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
@@ -197,7 +289,104 @@ export default function Admin() {
                   {!loading && users.length === 0 && (
                     <tr><td className="px-6 py-4" colSpan={4}>No users found.</td></tr>
                   )}
-                  {!loading && filtered.map((u) => (
+                  {!loading && pageSize === 'all' && filtered.length > 0 && (
+                    <tr style={{ height: startIndex * rowHeight }}>
+                      <td colSpan={4} />
+                    </tr>
+                  )}
+                  {!loading && pageSize === 'all' && filtered.slice(startIndex, Math.min(filtered.length, startIndex + visibleCount)).map((u) => (
+                    <tr key={u.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {u.name}
+                          </div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {u.email}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {editingId === u.id ? (
+                          <select
+                            value={editForm.role}
+                            onChange={(e) => setEditForm(f => ({ ...f, role: e.target.value }))}
+                            className="border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-800 text-sm"
+                          >
+                            <option value="user">user</option>
+                            <option value="admin">admin</option>
+                          </select>
+                        ) : (
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            u.role === 'admin'
+                              ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+                              : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                          }`}>
+                            {u.role}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {editingId === u.id ? (
+                          <select
+                            value={editForm.status}
+                            onChange={(e) => setEditForm(f => ({ ...f, status: e.target.value }))}
+                            className="border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-800 text-sm"
+                          >
+                            <option value="active">active</option>
+                            <option value="inactive">inactive</option>
+                          </select>
+                        ) : (
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            (u.status || 'active') === 'active'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          }`}>
+                            {u.status || 'active'}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        {editingId === u.id ? (
+                          <>
+                            <button
+                              onClick={saveEdit}
+                              className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 mr-3"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={cancelEdit}
+                              className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => startEdit(u)}
+                              className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-3"
+                            >
+                              {t('edit')}
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(u.id)}
+                              className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                            >
+                              {t('delete')}
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {!loading && pageSize === 'all' && filtered.length > 0 && (
+                    <tr style={{ height: Math.max(0, (filtered.length - (startIndex + visibleCount)) * rowHeight) }}>
+                      <td colSpan={4} />
+                    </tr>
+                  )}
+                  {!loading && pageSize !== 'all' && displayList.map((u) => (
                     <tr key={u.id}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
@@ -327,9 +516,7 @@ export default function Admin() {
                     {t('require_2fa')}
                   </p>
                 </div>
-                <button className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
-                  {t('configure')}
-                </button>
+                <TwoFAToggle />
               </div>
               
               <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -341,12 +528,7 @@ export default function Admin() {
                     {t('auto_logout_inactive')}
                   </p>
                 </div>
-                <select className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800">
-                  <option>15 minutes</option>
-                  <option>30 minutes</option>
-                  <option>1 hour</option>
-                  <option>2 hours</option>
-                </select>
+                <SessionTimeoutSelector />
               </div>
             </div>
           </div>
@@ -407,5 +589,56 @@ export default function Admin() {
         )}
       </div>
     </div>
+  );
+}
+
+function TwoFAToggle() {
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    getDocs(collection(db, 'settings')).then((snap) => {
+      const docData = snap.docs.find(d => d.id === 'security')?.data();
+      if (docData && typeof docData.require2fa === 'boolean') setEnabled(docData.require2fa);
+    }).catch(() => {});
+  }, []);
+  const toggle = async () => {
+    try {
+      await updateDoc(doc(db, 'settings', 'security'), { require2fa: !enabled });
+      setEnabled(!enabled);
+      toast.success('2FA setting updated');
+    } catch {
+      await deleteDoc(doc(db, 'settings', 'security')).catch(()=>{});
+      await updateDoc(doc(db, 'settings', 'security'), { require2fa: !enabled }).catch(()=>{});
+      setEnabled(!enabled);
+    }
+  };
+  return (
+    <button onClick={toggle} className={`px-4 py-2 rounded-md ${enabled ? 'bg-green-600 text-white' : 'bg-indigo-600 text-white'} hover:opacity-90`}>
+      {enabled ? '2FA Enabled' : 'Enable 2FA'}
+    </button>
+  );
+}
+
+function SessionTimeoutSelector() {
+  const [minutes, setMinutes] = useState(30);
+  useEffect(() => {
+    getDocs(collection(db, 'settings')).then((snap) => {
+      const docData = snap.docs.find(d => d.id === 'security')?.data();
+      if (docData && typeof docData.sessionTimeoutMinutes === 'number') setMinutes(docData.sessionTimeoutMinutes);
+    }).catch(() => {});
+  }, []);
+  const update = async (m) => {
+    setMinutes(m);
+    try {
+      await updateDoc(doc(db, 'settings', 'security'), { sessionTimeoutMinutes: m });
+      toast.success('Session timeout updated');
+    } catch {}
+  };
+  return (
+    <select value={minutes} onChange={(e) => update(Number(e.target.value))} className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800">
+      <option value={15}>15 minutes</option>
+      <option value={30}>30 minutes</option>
+      <option value={60}>1 hour</option>
+      <option value={120}>2 hours</option>
+    </select>
   );
 }

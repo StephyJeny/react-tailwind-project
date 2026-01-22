@@ -231,6 +231,8 @@ export default function Layout({ children }) {
             {/* User Menu */}
             <div className="relative">
               <button
+                aria-label={user?.name || 'User menu'}
+                data-testid="user-menu-toggle"
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center gap-2 text-sm rounded-lg px-3 py-2 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
