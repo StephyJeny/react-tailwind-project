@@ -7,7 +7,10 @@ import {
   sendEmailVerification,
   signInWithPopup,
   updateProfile,
-  onAuthStateChanged
+  onAuthStateChanged,
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
@@ -204,6 +207,21 @@ export const authService = {
         };
       }
       throw new Error('No user logged in');
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  },
+  
+  // Change password with re-authentication
+  changePassword: async (currentPassword, newPassword) => {
+    try {
+      if (!auth.currentUser) throw new Error('No user logged in');
+      const user = auth.currentUser;
+      const email = user.email;
+      const credential = EmailAuthProvider.credential(email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, newPassword);
+      return { data: { message: 'Password updated successfully' } };
     } catch (error) {
       throw new Error(error.message);
     }

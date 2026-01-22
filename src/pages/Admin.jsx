@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   UsersIcon, 
   ShieldCheckIcon, 
@@ -18,6 +18,10 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ role: 'user', status: 'active' });
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -35,6 +39,32 @@ export default function Admin() {
     };
     fetchUsers();
   }, []);
+
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const list = term
+      ? users.filter(u => 
+          (u.name || '').toLowerCase().includes(term) ||
+          (u.email || '').toLowerCase().includes(term) ||
+          (u.role || '').toLowerCase().includes(term) ||
+          (u.status || '').toLowerCase().includes(term)
+        )
+      : users;
+    const start = (page - 1) * pageSize;
+    return list.slice(start, start + pageSize);
+  }, [users, search, page]);
+  const totalPages = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const count = term
+      ? users.filter(u => 
+          (u.name || '').toLowerCase().includes(term) ||
+          (u.email || '').toLowerCase().includes(term) ||
+          (u.role || '').toLowerCase().includes(term) ||
+          (u.status || '').toLowerCase().includes(term)
+        ).length
+      : users.length;
+    return Math.max(1, Math.ceil(count / pageSize));
+  }, [users, search]);
 
   const startEdit = (u) => {
     setEditingId(u.id);
@@ -59,8 +89,6 @@ export default function Admin() {
   };
 
   const deleteUser = async (id) => {
-    const confirmed = window.confirm('Delete this user?');
-    if (!confirmed) return;
     try {
       await deleteDoc(doc(db, 'users', id));
       setUsers(prev => prev.filter(u => u.id !== id));
@@ -119,6 +147,31 @@ export default function Admin() {
             <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
               {t('user_management')}
             </h2>
+            <div className="flex items-center justify-between mb-4">
+              <input
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                placeholder="Search users..."
+                className="w-64 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm"
+              />
+              <div className="flex items-center gap-2 text-sm">
+                <button
+                  disabled={page <= 1}
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  className="px-3 py-1 rounded border border-gray-300 dark:border-gray-700 disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                <span>Page {page} / {totalPages}</span>
+                <button
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  className="px-3 py-1 rounded border border-gray-300 dark:border-gray-700 disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">
@@ -144,7 +197,7 @@ export default function Admin() {
                   {!loading && users.length === 0 && (
                     <tr><td className="px-6 py-4" colSpan={4}>No users found.</td></tr>
                   )}
-                  {!loading && users.map((u) => (
+                  {!loading && filtered.map((u) => (
                     <tr key={u.id}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
@@ -221,7 +274,7 @@ export default function Admin() {
                               {t('edit')}
                             </button>
                             <button
-                              onClick={() => deleteUser(u.id)}
+                              onClick={() => setConfirmDeleteId(u.id)}
                               className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                             >
                               {t('delete')}
@@ -234,6 +287,28 @@ export default function Admin() {
                 </tbody>
               </table>
             </div>
+            {confirmDeleteId && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-96">
+                  <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Confirm Deletion</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">Are you sure you want to delete this user?</p>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="px-4 py-2 rounded border border-gray-300 dark:border-gray-700"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={async () => { await deleteUser(confirmDeleteId); setConfirmDeleteId(null); }}
+                      className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -285,15 +360,15 @@ export default function Admin() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                 <h3 className="font-medium text-blue-900 dark:text-blue-100">{t('total_users')}</h3>
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">1,234</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{users.length}</p>
               </div>
               <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
                 <h3 className="font-medium text-green-900 dark:text-green-100">{t('active_sessions')}</h3>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">89</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{users.filter(u => (u.status || 'active') === 'active').length}</p>
               </div>
               <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
                 <h3 className="font-medium text-yellow-900 dark:text-yellow-100">{t('failed_logins')}</h3>
-                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">12</p>
+                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">0</p>
               </div>
             </div>
           </div>

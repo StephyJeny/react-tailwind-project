@@ -13,10 +13,12 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { useApp } from "../state/AppContext";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import LanguageSelector from "../components/LanguageSelector";
 
 export default function Settings() {
-  const { user, clearAll, theme, toggleTheme, t, reducedMotionOverride, setReducedMotionOverride } = useApp();
+  const { user, clearAll, theme, toggleTheme, t, reducedMotionOverride, setReducedMotionOverride, changePassword } = useApp();
   const [activeTab, setActiveTab] = useState('profile');
 
   const tabs = [
@@ -152,26 +154,47 @@ function ProfileSection({ user }) {
 }
 
 function SecuritySection() {
-  const onSubmit = (e) => {
-    e.preventDefault();
-    toast.success("Password updated successfully!");
+  const schema = z.object({
+    currentPassword: z.string().min(6, "Current password is required"),
+    newPassword: z.string().min(8, "New password must be at least 8 characters"),
+    confirmPassword: z.string()
+  }).refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"]
+  });
+  const { register, handleSubmit, formState: { errors }, reset } = useForm({
+    resolver: zodResolver(schema),
+    mode: 'onChange'
+  });
+
+  const onSubmit = async (data) => {
+    try {
+      await changePassword(data.currentPassword, data.newPassword);
+      toast.success("Password updated successfully!");
+      reset();
+    } catch (error) {
+      toast.error(error.message || "Failed to update password");
+    }
   };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
       <h3 className="text-lg font-medium text-gray-900 dark:text-white">Change Password</h3>
-      <form onSubmit={onSubmit} className="space-y-4 max-w-md">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-md">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Password</label>
-          <input type="password" className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500" />
+          <input {...register('currentPassword')} type="password" className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500" />
+          {errors.currentPassword && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.currentPassword.message}</p>}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label>
-          <input type="password" className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500" />
+          <input {...register('newPassword')} type="password" className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500" />
+          {errors.newPassword && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.newPassword.message}</p>}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm New Password</label>
-          <input type="password" className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500" />
+          <input {...register('confirmPassword')} type="password" className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500" />
+          {errors.confirmPassword && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.confirmPassword.message}</p>}
         </div>
         <button type="submit" className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
           Update Password

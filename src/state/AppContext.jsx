@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 
 import { authService } from "../services/authService";
+import { db } from "../services/firebase";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { tokenManager, isTokenValid, startSessionTimer, clearSessionTimer, resetSessionTimer } from "../utils/auth";
 
 const AppContext = createContext(null);
@@ -25,6 +27,7 @@ export function AppProvider({ children }) {
   const [reducedMotionOverride, setReducedMotionOverride] = useState(storage.get("pf_reduce_motion", "auto")); // 'auto' | 'on' | 'off'
   const [transactions, setTransactions] = useState(storage.get("pf_tx", []));
   const [cart, setCart] = useState(storage.get("pf_cart_guest", []));
+  const firestoreEnabled = !!import.meta.env.VITE_FIREBASE_PROJECT_ID;
 
   // Session timeout handler
   const handleSessionTimeout = useCallback(() => {
@@ -129,8 +132,21 @@ export function AppProvider({ children }) {
   // Load cart per user
   useEffect(() => {
     if (user?.id) {
-      const userCart = storage.get(`pf_cart_${user.id}`, []);
-      setCart(userCart);
+      const key = `pf_cart_${user.id}`;
+      const localCart = storage.get(key, []);
+      setCart(localCart);
+      if (firestoreEnabled) {
+        try {
+          const cartRef = doc(db, "carts", user.id);
+          const unsub = onSnapshot(cartRef, (snap) => {
+            const data = snap.data();
+            if (data && Array.isArray(data.items)) {
+              setCart(data.items);
+            }
+          });
+          return () => unsub();
+        } catch {}
+      }
     } else {
       const guestCart = storage.get("pf_cart_guest", []);
       setCart(guestCart);
@@ -265,6 +281,19 @@ export function AppProvider({ children }) {
   };
 
   const clearAuthError = () => setAuthError(null);
+  
+  const changePassword = async (currentPassword, newPassword) => {
+    try {
+      setIsLoading(true);
+      const response = await authService.changePassword(currentPassword, newPassword);
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      setAuthError(error.message);
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Transaction functions
   const addTx = (tx) =>
@@ -277,18 +306,32 @@ export function AppProvider({ children }) {
     setCart((prev) => {
       const existingItem = prev.find((item) => item.id === product.id);
       if (existingItem) {
-        return prev.map((item) =>
+        const updated = prev.map((item) =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
+        if (user?.id && firestoreEnabled) {
+          try { setDoc(doc(db, "carts", user.id), { items: updated }, { merge: true }); } catch {}
+        }
+        return updated;
       }
-      return [...prev, { ...product, quantity: 1 }];
+      const next = [...prev, { ...product, quantity: 1 }];
+      if (user?.id && firestoreEnabled) {
+        try { setDoc(doc(db, "carts", user.id), { items: next }, { merge: true }); } catch {}
+      }
+      return next;
     });
   };
 
   const removeFromCart = (productId) => {
-    setCart((prev) => prev.filter((item) => item.id !== productId));
+    setCart((prev) => {
+      const next = prev.filter((item) => item.id !== productId);
+      if (user?.id && firestoreEnabled) {
+        try { setDoc(doc(db, "carts", user.id), { items: next }, { merge: true }); } catch {}
+      }
+      return next;
+    });
   };
 
   const updateCartQuantity = (productId, quantity) => {
@@ -297,14 +340,23 @@ export function AppProvider({ children }) {
       return;
     }
     
-    setCart((prev) =>
-      prev.map((item) =>
+    setCart((prev) => {
+      const next = prev.map((item) =>
         item.id === productId ? { ...item, quantity } : item
-      )
-    );
+      );
+      if (user?.id && firestoreEnabled) {
+        try { setDoc(doc(db, "carts", user.id), { items: next }, { merge: true }); } catch {}
+      }
+      return next;
+    });
   };
 
-  const clearCart = () => setCart([]);
+  const clearCart = () => {
+    setCart([]);
+    if (user?.id && firestoreEnabled) {
+      try { setDoc(doc(db, "carts", user.id), { items: [] }, { merge: true }); } catch {}
+    }
+  };
 
   const cartTotal = useMemo(() => {
     return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
@@ -581,6 +633,7 @@ export function AppProvider({ children }) {
     resendVerification,
     resetPassword,
     clearAuthError,
+    changePassword,
     
     // App state
     theme,
